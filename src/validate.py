@@ -80,7 +80,7 @@ def validate(src: Path, out: Path, terms: dict) -> list[tuple]:
                 diffs.append(("공통값", r2, name, v1, v2))
         opt = a.cell(r1, ha["선택사항"]).value
         exp_name, _ = rules.convert_product(a.cell(r1, ha["상품명"]).value, opt, terms)
-        exp_opt, _ = rules.convert_option(opt, terms)
+        exp_opt, _ = rules.convert_option(opt, terms, a.cell(r1, ha["상품명"]).value)
         exp_extra = rules.make_extra(a.cell(r1, ha["수령자"]).value, a.cell(r1, ha["주소"]).value, terms)
         for label, exp, got in (
             ("상품명", exp_name, b.cell(r2, hb["상품명"]).value),

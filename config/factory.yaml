@@ -19,7 +19,7 @@ warning:
 # CJ 주문의 택배운임은 운임표와 무관하게 cj_fee 로 고정한다.
 carriers:
   kyungdong: ["경동택배"]
-  cj: ["CJ택배"]
+  cj: ["CJ택배", "CJ대한통운"]
   cj_fee: 3000
   cj_suffix: "-CJ"
 

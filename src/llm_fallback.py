@@ -39,6 +39,8 @@ def build_prompt(names: list[str], terms: dict) -> str:
 
 규칙:
 - 템플릿에서 색상 자리는 반드시 {{color}} 로 쓴다 (색상은 코드가 따로 채운다). 다른 중괄호 변수는 쓰지 말 것.
+- 헬멧·보호대 같은 소품은 맨 끝에 {{count}} 를 붙인다 (코드가 2개 이상일 때만 '/2개' 로 채운다). 자전거에는 붙이지 않는다.
+- 소품 표기 예: '삼천리SH700어린이어반헬멧/{{color}}{{count}}' (브랜드+모델코드+대상+품목 순으로 짧게, 수식어·마케팅 문구는 버린다).
 - 상품명에 색상이 안 들어 있으면 {{color}} 만 넣고, 원본에 없는 정보(연식·사이즈)를 지어내지 말 것.
 - 확신이 없으면 그 상품은 null 로 둔다. 틀린 값을 내는 것보다 null 이 낫다.
 - 출력은 JSON 객체 하나만: {{"원본 상품명": "템플릿 또는 null", ...}}. 설명 금지.
@@ -55,7 +57,7 @@ def valid_template(t) -> bool:
         fields = [f for _, f, _, _ in string.Formatter().parse(t) if f is not None]
     except ValueError:
         return False
-    return all(f == "color" for f in fields)
+    return all(f in ("color", "count") for f in fields)
 
 
 def parse_response(text: str, names: list[str]) -> dict[str, str]:

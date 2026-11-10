@@ -31,6 +31,20 @@ def data_rows(ws, key_col: int) -> list[int]:
     return [r for r in range(2, ws.max_row + 1) if ws.cell(r, key_col).value not in (None, "")]
 
 
+CLAIM = "클레임사유"
+
+
+def is_claim(ws, h: dict, r: int) -> bool:
+    """클레임사유가 적힌 주문(취소·반품 등)이면 True."""
+    c = h.get(CLAIM)
+    return bool(c) and str(ws.cell(r, c).value or "").strip() != ""
+
+
+def active_rows(ws, h: dict) -> list[int]:
+    """산출물(공장/택배/내부보관)에 넣을 행: 주문번호가 있고 클레임이 없는 행. 중간파일에는 클레임 행도 그대로 남는다."""
+    return [r for r in data_rows(ws, h[KEY]) if not is_claim(ws, h, r)]
+
+
 def apply_llm_fallback(ws, h, rows, terms: dict, map_path: Path) -> int:
     """규칙·매핑표에 없는 상품명을 LLM 에 제안받아 매핑표에 status: llm 으로 저장. 새로 저장한 건수 반환."""
     import llm_fallback  # 지연 import: --llm 을 쓸 때만 anthropic 필요
@@ -59,6 +73,9 @@ def convert(src: Path, dst: Path, terms: dict, use_llm: bool = False,
 
     rows = data_rows(ws, h[KEY])
     warnings: list[tuple[int, str, str]] = []
+    n_claim = sum(1 for r in rows if is_claim(ws, h, r))
+    if n_claim:
+        print(f"클레임 {n_claim}건은 중간파일에 남기고, 공장/택배/내부보관 파일에서는 제외됩니다.")
     if use_llm:
         n = apply_llm_fallback(ws, h, rows, terms, map_path)
         print(f"LLM 상품명 제안 {n}건 -> {map_path} (status: llm, 확인 필요)")
@@ -70,7 +87,7 @@ def convert(src: Path, dst: Path, terms: dict, use_llm: bool = False,
         new_name, w = rules.convert_product(name, opt, terms)
         if w:
             warnings.append((r, "상품명", w))
-        new_opt, w = rules.convert_option(opt, terms)
+        new_opt, w = rules.convert_option(opt, terms, name)
         if w:
             warnings.append((r, "선택사항", w))
         ws.cell(r, h["상품명"]).value = new_name

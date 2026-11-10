@@ -42,7 +42,23 @@ def extract_color(option, terms: dict) -> str | None:
     for pat in terms["color_patterns"]:
         m = re.search(pat, text)
         if m:
-            return m.group(1).strip()
+            color = re.sub(r"\(.*?\)", "", m.group(1))          # 라이트핑크(무광) -> 라이트핑크
+            color = re.sub(r"[-\s]*\d+\s*개$", "", color)       # 블루-1개 -> 블루
+            return color.strip() or None
+    return None
+
+
+def count_suffix(option) -> str:
+    """선택사항의 'N개'가 2 이상이면 '/N개', 아니면 빈 문자열. 템플릿의 {count} 자리에 들어간다."""
+    nums = [int(n) for n in re.findall(r"(\d+)\s*개", _s(option))]
+    return f"/{nums[0]}개" if nums and nums[0] > 1 else ""
+
+
+def find_rule(name, terms: dict):
+    plain = _s(name).replace(" ", "")
+    for rule in terms["products"]:
+        if all(k.replace(" ", "") in plain for k in rule["contains"]):
+            return rule
     return None
 
 
@@ -57,6 +73,7 @@ def convert_product(name, option, terms: dict):
             if color is None:
                 return name, "색상을 선택사항에서 찾지 못함"
             values["color"] = color
+            values["count"] = count_suffix(option)
             for var, pats in (rule.get("vars") or {}).items():
                 for pat in pats:
                     m = re.search(pat, text)
@@ -71,12 +88,16 @@ def convert_product(name, option, terms: dict):
         color = extract_color(option, terms)
         if color is None and "{color}" in hit["template"]:
             return name, "색상을 선택사항에서 찾지 못함"
-        value = hit["template"].format(color=color)
+        value = hit["template"].format(color=color, count=count_suffix(option))
         return value, (LLM_WARN if hit["status"] != "ok" else None)
     return name, "변환 표에 없는 상품"
 
 
-def convert_option(option, terms: dict):
+def convert_option(option, terms: dict, name=None):
+    """name 을 주면, blank_option 이 켜진 상품(소품: 색상·수량이 상품명에 들어감)은 선택사항을 빈칸으로."""
+    rule = find_rule(name, terms) if name is not None else None
+    if rule and rule.get("blank_option"):
+        return None, None
     text = _s(option)
     for rule in terms["options"]:
         if rule["keyword"] in text:

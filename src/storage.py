@@ -24,7 +24,7 @@ from openpyxl.utils import get_column_letter
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naming  # noqa: E402
 import factory as F  # noqa: E402
-from convert import KEY, data_rows  # noqa: E402
+from convert import KEY, active_rows  # noqa: E402
 
 DEFAULT_CFG = Path(__file__).resolve().parent.parent / "config" / "storage.yaml"
 KNOWN = ["접수일자", "송장번호", "상품명", "수화주명", "주문량", "상품옵션",
@@ -202,7 +202,7 @@ def build(src: Path, dst: Path, cfg: dict) -> tuple[int, list[str]]:
     ws = load_workbook(src).active
     h, extra_col = check_columns(ws)
     rows = []
-    for r in data_rows(ws, h[KEY]):
+    for r in active_rows(ws, h):
         row = build_row(ws, r, h, extra_col, cfg, fcfg)
         if "접수일자" in row and row["접수일자"] is None:
             raise SystemExit(f"{r}행: 접수일자를 읽을 수 없습니다 ({', '.join(cfg['date_sources'])})")

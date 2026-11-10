@@ -24,7 +24,7 @@ from openpyxl import load_workbook
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import factory as F  # noqa: E402
 import xlsxkit as xk  # noqa: E402
-from convert import KEY, data_rows  # noqa: E402
+from convert import KEY, active_rows  # noqa: E402
 from validate import norm, write_report  # noqa: E402
 
 
@@ -89,7 +89,7 @@ def check_file(a, h: dict, extra_col: int, ra: list[int], out: Path, cfg: dict, 
 def validate(src: Path, out: Path, cfg: dict) -> tuple[list[tuple], int, dict]:
     a = load_workbook(src).active
     h, extra_col = F.locate(a)
-    all_rows = data_rows(a, h[KEY])
+    all_rows = active_rows(a, h)
     kd, cj, _unknown = F.split_rows(a, h, all_rows, cfg)
 
     diffs = check_file(a, h, extra_col, kd, out, cfg)

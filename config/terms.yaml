@@ -18,6 +18,14 @@ products:
     vars:
       size: ['시애틀\s*(\d{2})(?!\d)']          # 시애틀20 -> 20
     template: "시애틀GS{size}/{color}"             # GS는 고정
+  # 소품: {count} 는 선택사항의 'N개'가 2 이상일 때만 '/N개' (1개면 생략).
+  # blank_option: 색상·수량이 상품명에 들어가므로 선택사항은 빈칸으로 만든다.
+  - contains: ["SH700"]
+    template: "삼천리SH700어린이어반헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["SPS110"]
+    template: "삼천리SPS110어린이보호대/{color}{count}"
+    blank_option: true
 
 # 선택사항 변환: 위에서부터 검사, 원본 선택사항에 keyword가 들어 있으면 value로 치환
 # value가 빈 문자열이면 빈칸으로 만든다.
@@ -31,6 +39,7 @@ options:
 color_patterns:
   - '색상\s*:\s*([^,/]+?)\s*(?:[,/]|$)'
   - '(?:완전조립|미조립\S*)\s+(\S+)'
+  - '^\s*([가-힣A-Za-z]+)\s+\d+개'            # 쿠팡식: "블랙 1개 170cm 완전조립"
 
 # 신규 컬럼: 헤더 없이 이 위치(기존 컬럼명 바로 뒤)에 삽입
 # 값 = 수령자 + "(" + 주소 앞 N글자 + ")"
