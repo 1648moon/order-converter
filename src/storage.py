@@ -73,6 +73,17 @@ def order_date(ws, r: int, h: dict, sources: list[str]) -> date | None:
     return None
 
 
+def is_excluded(name, cfg: dict) -> bool:
+    """자전거 외 부품(헬멧·보호대 등)은 내부보관용에서 제외 (config/storage.yaml exclude_keywords)."""
+    text = str(name or "").replace(" ", "")
+    return any(k.replace(" ", "") in text for k in cfg.get("exclude_keywords") or [])
+
+
+def storage_rows(ws, h: dict, cfg: dict) -> list[int]:
+    """내부보관용에 넣을 행 번호 (제외 대상 상품 뺀 활성 행). 생성과 검증이 공유."""
+    return [r for r in active_rows(ws, h) if not is_excluded(ws.cell(r, h["상품명"]).value, cfg)]
+
+
 def build_row(ws, r: int, h: dict, extra_col: int, cfg: dict, fcfg: dict) -> dict:
     g = lambda name: ws.cell(r, h[name]).value  # noqa: E731
     opt = g("선택사항")
@@ -202,7 +213,7 @@ def build(src: Path, dst: Path, cfg: dict) -> tuple[int, list[str]]:
     ws = load_workbook(src).active
     h, extra_col = check_columns(ws)
     rows = []
-    for r in active_rows(ws, h):
+    for r in storage_rows(ws, h, cfg):
         row = build_row(ws, r, h, extra_col, cfg, fcfg)
         if "접수일자" in row and row["접수일자"] is None:
             raise SystemExit(f"{r}행: 접수일자를 읽을 수 없습니다 ({', '.join(cfg['date_sources'])})")

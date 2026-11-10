@@ -43,7 +43,7 @@ def validate(src: Path, out: Path, cfg: dict) -> tuple[list[tuple], int]:
         return diffs, 0
     hb = {name: i + 1 for i, name in enumerate(heads)}
 
-    ra = active_rows(a, h)
+    ra = S.storage_rows(a, h, cfg)
     rb = [r for r in range(2, b.max_row + 1)
           if any(b.cell(r, c).value not in (None, "") for c in range(1, len(heads) + 1))]
     if len(ra) != len(rb):
