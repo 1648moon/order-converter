@@ -1,0 +1,7 @@
+openpyxl
+pandas
+pyyaml
+anthropic
+discord.py==2.7.1
+streamlit
+flask

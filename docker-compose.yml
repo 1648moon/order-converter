@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_PASSWORD: ${APP_PASSWORD:?.env 파일에 APP_PASSWORD 를 설정하세요}
+    volumes:
+      - state:/state            # 파일명만 기록 (개인정보 없음)
+    ports:
+      - "127.0.0.1:8501:8501"   # 서버 밖에서 직접 접근 불가 (Tailscale serve 로만 노출)
+volumes:
+  state:

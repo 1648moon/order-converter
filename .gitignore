@@ -1,0 +1,11 @@
+input/
+output/
+reports/
+.venv/
+!input/*_masked.xlsx
+.DS_Store
+__pycache__/
+*.pyc
+.env
+.discord_sessions.json
+state/
