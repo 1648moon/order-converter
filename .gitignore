@@ -8,3 +8,4 @@ __pycache__/
 *.pyc
 .env
 .discord_sessions.json
+state/
