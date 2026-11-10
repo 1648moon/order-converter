@@ -28,8 +28,15 @@ with tempfile.TemporaryDirectory() as d:
     # 확인(ok) 처리하면 경고 없음
     t2["_map"]["신상자전거XYZ"]["status"] = "ok"
     assert rules.convert_product("신상 자전거 XYZ", opt, t2) == ("XYZ/블랙", None)
-    # 색상 없으면 원본 유지 + 경고
-    assert rules.convert_product("신상 자전거 XYZ", "옵션없음", t2)[1] is not None
+    # 색상이 없으면 '/색상' 부분만 생략 (경고 없음)
+    assert rules.convert_product("신상 자전거 XYZ", "옵션없음", t2) == ("XYZ", None)
     # 기존 규칙이 우선
     assert rules.convert_product("빅마운틴 2026년형", opt, t2)[0] == "빅마운틴/블랙(2026)"
+# 축약 자전거명 목록(내부보관용 product_list) -> 색상 템플릿, 프롬프트에 포함
+t = rules.load_terms(map_path=Path("/nonexistent.yaml"))
+bt = L.bike_templates(t)
+assert "시애틀MT24/{color}" in bt and "빅마운틴/{color}(2026)" in bt and "엑스퍼트/380{color}" in bt and "엑스퍼트/510{color}" in bt
+assert len(bt) == len(set(bt)) and all(L.valid_template(x) for x in bt)
+pr = L.build_prompt(["x"], t)
+assert "시애틀키즈18/{color}" in pr and "시애틀클래식20/{color}" in pr and "시애틀라인26/{color}" in pr
 print("OK")

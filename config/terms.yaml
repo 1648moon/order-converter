@@ -12,12 +12,39 @@ products:
   - contains: ["시애틀F"]
     vars:
       size: ['시애틀F\s*(\d{2})(?!\d)',         # 시애틀F 26
-             '(?<!\d)(\d{2})\s*형']             # 26형
+             '(?<!\d)(\d{2})\s*(?:형|인치)']             # 26형
     template: "시애틀F{size}/{color}"
   - contains: ["시애틀20"]
     vars:
       size: ['시애틀\s*(\d{2})(?!\d)']          # 시애틀20 -> 20
     template: "시애틀GS{size}/{color}"             # GS는 고정
+  # 아래 모델 표기는 내부보관용 오른쪽 표(storage.yaml product_list)를 따른다.
+  # 시애틀라인은 상품명에 '클래식'도 들어 있어서 시애틀클래식보다 먼저 검사해야 한다.
+  - contains: ["시애틀", "라인"]
+    vars:
+      size: ['라인\s*(\d{2})(?!\d)']            # 시애틀 라인 24 -> 24
+    template: "시애틀라인{size}/{color}"
+  - contains: ["시애틀", "키즈"]
+    vars:
+      size: ['(?<!\d)(\d{2})\s*(?:형|인치)']    # 18형, 20인치
+    template: "시애틀키즈{size}/{color}"
+  - contains: ["시애틀", "클래식"]
+    vars:
+      size: ['클래식\s*(\d{2})(?!\d)',          # 시애틀 클래식 18
+             '(?<!\d)(\d{2})\s*(?:형|인치)']
+    template: "시애틀클래식{size}/{color}"
+  - contains: ["시애틀", "MT"]
+    vars:
+      size: ['MT\s*(\d{2})(?!\d)']              # 시애틀 MT 24
+    template: "시애틀MT{size}/{color}"
+  # 첼로 부스터는 내부보관용 표(product_list)에 아직 없는 모델 (표기는 사용자가 지정)
+  - contains: ["첼로", "부스터"]
+    vars:
+      size: ['부스터\s*(\d{2})(?!\d)',          # 첼로 부스터 24
+             '(?<!\d)(\d{2})\s*부스터']         # 첼로 24 부스터
+    template: "첼로부스터{size}/{color}"
+  - contains: ["엑스퍼트"]
+    template: "엑스퍼트/{color}"                  # 380/440/510 사이즈는 선택사항 색상값에 포함되어 들어온다고 가정(미확인)
   # 소품: {count} 는 선택사항의 'N개'가 2 이상일 때만 '/N개' (1개면 생략).
   # blank_option: 색상·수량이 상품명에 들어가므로 선택사항은 빈칸으로 만든다.
   - contains: ["SH700"]
@@ -25,6 +52,142 @@ products:
     blank_option: true
   - contains: ["SPS110"]
     template: "삼천리SPS110어린이보호대/{color}{count}"
+    blank_option: true
+  # 용품 (상품목록_부품축약예시 패턴을 따라 추측한 이름 - 확인 필요). 캐릭터명·코드 끝 L 제외. 색상이 없으면 '/색상' 생략.
+  - contains: ["SH310"]
+    template: "삼천리SH310어린이헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["SH110"]
+    template: "삼천리SH110아동어반헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["AH910SR"]
+    template: "삼천리AH910SR성인어반후미등헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["AH710SR"]
+    template: "삼천리AH710SR성인인몰드어반후미등헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["AH340", "주니어"]
+    template: "삼천리AH340주니어헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["AH340"]
+    template: "삼천리AH340성인헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["DH-470"]
+    template: "디스트로DH470성인헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["DH470"]
+    template: "디스트로DH470성인헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["DH-468"]
+    template: "디스트로DH468미러고글헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["DH468"]
+    template: "디스트로DH468미러고글헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["아이시스"]
+    template: "아이시스K5에일린2주니어헬멧/{color}{count}"
+    blank_option: true
+  - contains: ["SPS150"]
+    template: "삼천리SPS150어린이보호대/{color}{count}"
+    blank_option: true
+  # 코드 없는 캐릭터 보호대는 SPS150으로 추측
+  - contains: ["보호대", "티니핑"]
+    template: "삼천리SPS150어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["보호대", "겨울왕국"]
+    template: "삼천리SPS150어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["보호대", "프린세스"]
+    template: "삼천리SPS150어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["AF015"]
+    template: "삼천리AF015올러스전조등/{color}{count}"
+    blank_option: true
+  - contains: ["AF500"]
+    template: "삼천리AF500충전식전조등/{color}{count}"
+    blank_option: true
+  - contains: ["AF450"]
+    template: "삼천리AF450충전식전조등/{color}{count}"
+    blank_option: true
+  - contains: ["AT500"]
+    template: "삼천리AT500충전식후미등/{color}{count}"
+    blank_option: true
+  - contains: ["디스트로", "후미등"]
+    template: "디스트로USB충전후미등/{color}{count}"
+    blank_option: true
+  - contains: ["SL360"]
+    template: "삼천리SL360사슬형번호키자물쇠/{color}{count}"
+    blank_option: true
+  - contains: ["SL110C"]
+    template: "삼천리SL110C와이어컬러자물쇠중/{color}{count}"
+    blank_option: true
+  - contains: ["7관절"]
+    template: "7관절락자물쇠/{color}{count}"
+    blank_option: true
+  - contains: ["TONYON"]
+    template: "TONYONTY217마디커버자물쇠/{color}{count}"
+    blank_option: true
+  # SL160C 를 SL160 보다 먼저 검사. 소/중/대는 상품명에서 읽는다.
+  - contains: ["SL160C"]
+    vars:
+      size: ['번호키(?:\s*자물쇠)?\s*(소|중|대)(?=\s|$)']
+    template: "삼천리SL160C컬러번호키{size}/{color}{count}"
+    blank_option: true
+  - contains: ["SL160"]
+    vars:
+      size: ['번호키(?:\s*자물쇠)?\s*(소|중|대)(?=\s|$)']
+    template: "삼천리SL160번호키자물쇠{size}/{color}{count}"
+    blank_option: true
+  # 코드 없는 번호키는 SL160으로 추측
+  - contains: ["번호키", "자물쇠"]
+    vars:
+      size: ['번호키(?:\s*자물쇠)?\s*(소|중|대)(?=\s|$)']
+    template: "삼천리SL160번호키자물쇠{size}/{color}{count}"
+    blank_option: true
+  - contains: ["SMR150"]
+    template: "삼천리SMR150핸들바엔드미러/{color}{count}"
+    blank_option: true
+  - contains: ["AC300W"]
+    template: "삼천리AC300W무선속도계/{color}{count}"
+    blank_option: true
+  - contains: ["AB570S"]
+    template: "삼천리AB570S탑튜브스마트폰홀더/{color}{count}"
+    blank_option: true
+  - contains: ["AB550S"]
+    template: "삼천리AB550S프레임스마트폰홀더/{color}{count}"
+    blank_option: true
+  - contains: ["SP110"]
+    template: "삼천리SP110알로이펌프소/{color}{count}"
+    blank_option: true
+  - contains: ["SRI110"]
+    template: "삼천리SRI110윤활방청제/{color}{count}"
+    blank_option: true
+  - contains: ["AO150"]
+    template: "삼천리AO150자전거오일/{color}{count}"
+    blank_option: true
+  - contains: ["ABC360"]
+    template: "삼천리ABC360물통걸이/{color}{count}"
+    blank_option: true
+  - contains: ["ABT220"]
+    template: "삼천리ABT220바테이프/{color}{count}"
+    blank_option: true
+  - contains: ["ABT110"]
+    template: "삼천리ABT110픽시바테이프/{color}{count}"
+    blank_option: true
+  - contains: ["바테이프"]
+    template: "삼천리바테이프/{color}{count}"
+    blank_option: true
+  - contains: ["바테잎"]
+    template: "삼천리바테이프/{color}{count}"
+    blank_option: true
+  - contains: ["AM310E"]
+    template: "삼천리AM310E멀티프/{color}{count}"
+    blank_option: true
+  - contains: ["이너패드"]
+    template: "이너패드팬츠/{color}{count}"
+    blank_option: true
+  - contains: ["속바지"]
+    template: "이너패드팬츠/{color}{count}"
     blank_option: true
 
 # 선택사항 변환: 위에서부터 검사, 원본 선택사항에 keyword가 들어 있으면 value로 치환
