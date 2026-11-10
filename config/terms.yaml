@@ -12,12 +12,33 @@ products:
   - contains: ["시애틀F"]
     vars:
       size: ['시애틀F\s*(\d{2})(?!\d)',         # 시애틀F 26
-             '(?<!\d)(\d{2})\s*형']             # 26형
+             '(?<!\d)(\d{2})\s*(?:형|인치)']             # 26형
     template: "시애틀F{size}/{color}"
   - contains: ["시애틀20"]
     vars:
       size: ['시애틀\s*(\d{2})(?!\d)']          # 시애틀20 -> 20
     template: "시애틀GS{size}/{color}"             # GS는 고정
+  # 아래 모델 표기는 내부보관용 오른쪽 표(storage.yaml product_list)를 따른다.
+  # 시애틀라인은 상품명에 '클래식'도 들어 있어서 시애틀클래식보다 먼저 검사해야 한다.
+  - contains: ["시애틀", "라인"]
+    vars:
+      size: ['라인\s*(\d{2})(?!\d)']            # 시애틀 라인 24 -> 24
+    template: "시애틀라인{size}/{color}"
+  - contains: ["시애틀", "키즈"]
+    vars:
+      size: ['(?<!\d)(\d{2})\s*(?:형|인치)']    # 18형, 20인치
+    template: "시애틀키즈{size}/{color}"
+  - contains: ["시애틀", "클래식"]
+    vars:
+      size: ['클래식\s*(\d{2})(?!\d)',          # 시애틀 클래식 18
+             '(?<!\d)(\d{2})\s*(?:형|인치)']
+    template: "시애틀클래식{size}/{color}"
+  - contains: ["시애틀", "MT"]
+    vars:
+      size: ['MT\s*(\d{2})(?!\d)']              # 시애틀 MT 24
+    template: "시애틀MT{size}/{color}"
+  - contains: ["엑스퍼트"]
+    template: "엑스퍼트/{color}"                  # 380/440/510 사이즈는 선택사항 색상값에 포함되어 들어온다고 가정(미확인)
   # 소품: {count} 는 선택사항의 'N개'가 2 이상일 때만 '/N개' (1개면 생략).
   # blank_option: 색상·수량이 상품명에 들어가므로 선택사항은 빈칸으로 만든다.
   - contains: ["SH700"]
