@@ -48,4 +48,4 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python src/serve.py                                  # 웹 업로드 화면
 ```
 
-디스코드 알림은 `.env.example`을 `.env`로 복사해 값을 채우면 켜집니다. 종료코드: 0 정상 / 2 경고(파일은 생성됨) / 1 오류·검증 실패.
+디스코드 알림은 `.env` 파일을 만들어 `DISCORD_TOKEN`, `DISCORD_CHANNEL_ID`, `DISCORD_OWNER_ID`를 채우면 켜집니다(파일명용 `BRAND_NAME`도 여기에). 종료코드: 0 정상 / 2 경고(파일은 생성됨) / 1 오류·검증 실패.

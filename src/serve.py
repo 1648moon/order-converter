@@ -2,7 +2,7 @@
 
     .venv/bin/python src/serve.py        ->  http://127.0.0.1:8765
 
-.env (커밋 금지) 예시는 .env.example 참고.
+.env (커밋 금지)에 DISCORD_TOKEN, DISCORD_CHANNEL_ID, DISCORD_OWNER_ID, BRAND_NAME 을 적는다.
 """
 from __future__ import annotations
 
