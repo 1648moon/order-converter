@@ -37,6 +37,12 @@ products:
     vars:
       size: ['MT\s*(\d{2})(?!\d)']              # 시애틀 MT 24
     template: "시애틀MT{size}/{color}"
+  # 첼로 부스터는 내부보관용 표(product_list)에 아직 없는 모델 (표기는 사용자가 지정)
+  - contains: ["첼로", "부스터"]
+    vars:
+      size: ['부스터\s*(\d{2})(?!\d)',          # 첼로 부스터 24
+             '(?<!\d)(\d{2})\s*부스터']         # 첼로 24 부스터
+    template: "첼로부스터{size}/{color}"
   - contains: ["엑스퍼트"]
     template: "엑스퍼트/{color}"                  # 380/440/510 사이즈는 선택사항 색상값에 포함되어 들어온다고 가정(미확인)
   # 소품: {count} 는 선택사항의 'N개'가 2 이상일 때만 '/N개' (1개면 생략).
