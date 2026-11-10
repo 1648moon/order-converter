@@ -1,8 +1,11 @@
 """상품목록 엑셀의 상품명 -> 내부보관용 오른쪽 표(storage.yaml product_list)의 축약 자전거명 매칭 점검.
 
-실행: .venv/bin/python -I tests/test_bike_match.py [상품목록.xlsx]
-기본 입력: input/상품목록(20261110).xlsx (없으면 건너뜀). 규칙은 config/terms.yaml.
-색상은 상품명에 없으므로 임의 선택사항("색상: 블랙")으로 채워 모델 부분(색상 앞/뒤 고정부)만 비교한다.
+실행: .venv/bin/python -I tests/test_bike_match.py [상품목록.xlsx] [--out 결과.xlsx]
+- 상품명에는 색상이 없으므로 '모델 단위 축약형'(색상 자리 '/{color}' 제거)을 구한다. 예) 시애틀MT24, 빅마운틴(2026), 엑스퍼트
+- 여러 상품명이 같은 축약형 하나에 매칭되는 다대일이 정상이다.
+- 용품(헬멧·자물쇠 등)은 내부보관용 대상이 아니므로 빈칸.
+- --out 을 주면 원본 엑셀 우측(B열 축약형, C열 비고)에 결과를 적어 새 파일로 저장한다. 원본은 건드리지 않는다.
+규칙은 config/terms.yaml.
 """
 import re, sys
 from pathlib import Path
@@ -11,63 +14,85 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 import openpyxl, rules  # noqa: E402
 
-# 이미 축약형으로 적혀 있는 값 (변환 대상 아님)
-ALREADY = re.compile(r"^(시애틀\S*|빅마운틴|엑스퍼트|부스터24)(/|$)")
+DEFAULT_IN = Path("/Users/moon/Documents/jimini/input/상품목록(20261110).xlsx")
+SENT = "§"   # convert_product 에 넘기는 가짜 색상. 결과에서 '/§' 를 지우면 모델 단위 축약형
 NEW_MODELS = {"첼로부스터24"}   # 내부보관용 표에 아직 없지만 표기를 정해 둔 모델
+# 이미 축약형으로 적힌 값: '시애틀MT26/', '엑스퍼트/미조립박스', '빅마운틴/(2025)', '부스터24'
+ALREADY = re.compile(r"^(?:시애틀\S*?|빅마운틴|엑스퍼트|부스터24)(?:/|$)")
+SHORT = re.compile(r"^([^/]+)/.*?(\(\d{4}\))?$")
 
 
-def models(bikes):
-    """축약명에서 모델 부분(첫 '/' 앞)과 {색상 앞 숫자(엑스퍼트 사이즈)} 제거한 형태."""
-    return {b.split("/")[0] for b in bikes}
+def model_key(name, terms):
+    """(축약형 또는 '', 비고 또는 ''). 용품·미해당은 ('', '')."""
+    n = name.strip()
+    if ALREADY.match(n):
+        if n == "부스터24":
+            return "첼로부스터24", "이미 축약형"
+        m = SHORT.match(n)
+        key = m.group(1) if m else n
+        if key == "빅마운틴" and m and m.group(2):   # 연식이 모델명의 일부인 건 빅마운틴뿐
+            key += m.group(2)
+        note = "이미 축약형"
+        if key in ("시애틀라인", "시애틀MT", "시애틀키즈", "시애틀클래식"):
+            note += " - 사이즈 없음, 확인 필요"
+        elif key == "빅마운틴":
+            note += " - 연식 없음, 확인 필요"
+        return key, note
+    out, w = rules.convert_product(n, f"색상: {SENT}", terms)
+    if w is None and out != n and "삼천리SH700" not in out and "삼천리SPS110" not in out:
+        return out.replace(f"/{SENT}", ""), ""
+    if w and w != "변환 표에 없는 상품":
+        return "", f"확인 필요: {w}"
+    return "", ""
 
 
-def main(path):
+def main(path, out=None):
     terms = rules.load_terms(map_path=Path("/nonexistent.yaml"))
-    bikes = terms["_bikes"]
-    mset = models(bikes)
-
-    names = [str(r[0]).strip() for r in openpyxl.load_workbook(path).active.iter_rows(min_row=2, values_only=True) if r[0]]
-    ok, already, warn, nobike = [], [], [], []
-    for n in names:
-        if ALREADY.match(n):
-            already.append(n); continue
-        out, w = rules.convert_product(n, "색상: 블랙", terms)
-        if w is None and out != n:
-            if "삼천리SH700" in out or "삼천리SPS110" in out:   # 소품 규칙
-                nobike.append((n, out)); continue
-            model = out.split("/")[0]
-            (ok if model in mset or model in NEW_MODELS or any(out.startswith(m) for m in mset) else warn).append((n, out, "모델이 product_list 에 없음"))
-        elif w and w != "변환 표에 없는 상품":
-            warn.append((n, out, w))
-        else:
-            nobike.append((n, "-"))
-    # 자전거로 보이는데 규칙이 못 잡은 것 점검
-    miss = [(n, o) for n, o in nobike if o == "-" and re.search(r"자전거|MTB", n) and not re.search(
-        r"헬멧|안전모|보호대|라이트|전조등|후미등|자물쇠|번호키|락|미러|거울|펌프|오일|방청|물통|속도계|홀더|가방|테잎|테이프|스카프|패드|속바지|고글|보호장비", n)]
-
-    print(f"전체 {len(names)}개 | 축약 변환 성공 {len(ok)} | 이미 축약형 {already.__len__()} | 경고 {len(warn)} | 용품/기타 {len(nobike) - len(miss)} | 자전거인데 미매칭 {len(miss)}")
-    got = {}
-    for n, o, _ in ok:
-        got.setdefault(o, []).append(n)
-    print("\n[변환 결과별 건수]")
-    for o in sorted(got):
-        print(f"  {o:28s} {len(got[o])}건")
-    print("\n[product_list 에 있는데 상품목록에서 안 잡힌 모델]")
-    seen = {o.split("/")[0] for o in got}
-    for m in sorted(mset - seen):
-        print("  ", m)
-    print("\n[경고 - 사람이 확인 필요]")
-    for n, o, w in warn:
-        print(f"  {w}: {n}")
-    print("\n[자전거로 보이는데 규칙 미매칭 - 신규 모델 후보]")
-    for n, _ in miss:
-        print("  ", n)
-    return len(ok), warn, miss
+    # 표 쪽 모델 단위 키: '빅마운틴/블랙(2026)' -> '빅마운틴(2026)', '엑스퍼트/380블랙화이트' -> '엑스퍼트'
+    table_keys = {re.sub(r"/[^()]*", "", b) for b in terms["_bikes"]}
+    wb = openpyxl.load_workbook(path)
+    ws = wb.active
+    rows = []
+    for r in range(2, ws.max_row + 1):
+        v = ws.cell(r, 1).value
+        if not v or not str(v).strip():
+            continue
+        key, note = model_key(str(v), terms)
+        if key and key not in table_keys and key not in NEW_MODELS:
+            note = (note + " " if note else "") + "우측 표에 없는 모델"
+        rows.append((r, str(v).strip(), key, note))
+    bikes = [x for x in rows if x[2]]
+    groups = {}
+    for _, n, k, _ in bikes:
+        groups.setdefault(k, []).append(n)
+    print(f"상품명 {len(rows)}개 | 자전거 축약 {len(bikes)}개 -> 축약형 {len(groups)}종 | 용품/기타(빈칸) {len(rows) - len(bikes)}개")
+    print("\n[축약형별 상품명 수 (다대일)]")
+    for k in sorted(groups):
+        flag = "" if (k in table_keys or k in NEW_MODELS) else "   <- 우측 표에 없음"
+        print(f"  {k:20s} {len(groups[k])}건{flag}")
+    print("\n[우측 표에는 있는데 상품목록에 없는 모델]")
+    print("  ", sorted(table_keys - set(groups)))
+    print("\n[확인 필요]")
+    for _, n, k, note in rows:
+        if "확인 필요" in note or "표에 없는" in note:
+            print(f"  {note}: {n} -> {k or '(빈칸)'}")
+    if out:
+        ws.cell(1, 2, "축약형"); ws.cell(1, 3, "비고")
+        for r, _, k, note in rows:
+            ws.cell(r, 2, k or None); ws.cell(r, 3, note or None)
+        ws.column_dimensions["B"].width = 22; ws.column_dimensions["C"].width = 40
+        wb.save(out)
+        print("\n저장:", out)
+    return rows
 
 
 if __name__ == "__main__":
-    p = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/Users/moon/Documents/jimini/input/상품목록(20261110).xlsx")
+    args = list(sys.argv[1:])
+    out = None
+    if "--out" in args:
+        i = args.index("--out"); out = Path(args[i + 1]); del args[i:i + 2]
+    p = Path(args[0]) if args else DEFAULT_IN
     if not p.exists():
         print("상품목록 파일이 없어 건너뜀:", p)
     else:
-        main(p)
+        main(p, out)
