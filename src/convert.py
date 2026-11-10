@@ -31,7 +31,25 @@ def data_rows(ws, key_col: int) -> list[int]:
     return [r for r in range(2, ws.max_row + 1) if ws.cell(r, key_col).value not in (None, "")]
 
 
-def convert(src: Path, dst: Path, terms: dict) -> list[tuple[int, str, str]]:
+def apply_llm_fallback(ws, h, rows, terms: dict, map_path: Path) -> int:
+    """규칙·매핑표에 없는 상품명을 LLM 에 제안받아 매핑표에 status: llm 으로 저장. 새로 저장한 건수 반환."""
+    import llm_fallback  # 지연 import: --llm 을 쓸 때만 anthropic 필요
+    missing = sorted({str(ws.cell(r, h["상품명"]).value).strip() for r in rows
+                      if rules.convert_product(ws.cell(r, h["상품명"]).value,
+                                               ws.cell(r, h["선택사항"]).value,
+                                               terms)[1] == "변환 표에 없는 상품"})
+    if not missing:
+        return 0
+    got = llm_fallback.suggest(missing, terms)
+    for name, tpl in got.items():
+        terms["_map"][name.replace(" ", "")] = {"name": name, "template": tpl, "status": "llm"}
+    if got:
+        rules.save_product_map(terms["_map"], map_path)
+    return len(got)
+
+
+def convert(src: Path, dst: Path, terms: dict, use_llm: bool = False,
+            map_path: Path = rules.DEFAULT_MAP) -> list[tuple[int, str, str]]:
     wb = load_workbook(src)
     ws = wb.active
     h = header_map(ws)
@@ -41,6 +59,9 @@ def convert(src: Path, dst: Path, terms: dict) -> list[tuple[int, str, str]]:
 
     rows = data_rows(ws, h[KEY])
     warnings: list[tuple[int, str, str]] = []
+    if use_llm:
+        n = apply_llm_fallback(ws, h, rows, terms, map_path)
+        print(f"LLM 상품명 제안 {n}건 -> {map_path} (status: llm, 확인 필요)")
 
     # 1) 값 변환 (컬럼 삽입 전, 원래 위치 기준)
     for r in rows:
@@ -86,6 +107,8 @@ def main() -> int:
     p.add_argument("src", type=Path)
     p.add_argument("-o", "--output", type=Path)
     p.add_argument("--terms", type=Path, default=rules.DEFAULT_TERMS)
+    p.add_argument("--map", type=Path, default=rules.DEFAULT_MAP, help="상품명 매핑표(LLM 제안 저장 위치)")
+    p.add_argument("--llm", action="store_true", help="규칙에 없는 상품명을 LLM 으로 제안받아 적용 (ANTHROPIC_API_KEY 필요)")
     a = p.parse_args()
     if not a.src.exists():
         print(f"파일 없음: {a.src}", file=sys.stderr)
@@ -94,10 +117,11 @@ def main() -> int:
     if dst.resolve() == a.src.resolve():
         print("출력 경로가 원본과 같습니다.", file=sys.stderr)
         return 1
-    warnings = convert(a.src, dst, rules.load_terms(a.terms))
+    warnings = convert(a.src, dst, rules.load_terms(a.terms, a.map), a.llm, a.map)
     print(f"변환 완료: {dst}")
     for r, col, msg in warnings:
-        print(f"  경고: {r}행 [{col}] {msg} - 원본 값 유지")
+        tail = "확인 후 product_map.yaml 에서 status 를 ok 로" if msg == rules.LLM_WARN else "원본 값 유지"
+        print(f"  경고: {r}행 [{col}] {msg} - {tail}")
     return 2 if warnings else 0
 
 
