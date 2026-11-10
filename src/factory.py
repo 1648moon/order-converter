@@ -32,7 +32,7 @@ from openpyxl.utils import get_column_letter
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naming  # noqa: E402
 import xlsxkit as xk  # noqa: E402
-from convert import KEY, data_rows, header_map  # noqa: E402
+from convert import KEY, active_rows, header_map  # noqa: E402
 
 DEFAULT_CFG = Path(__file__).resolve().parent.parent / "config" / "factory.yaml"
 REQUIRED = ["수령자", "우편번호", "주소", "수령자전화번호", "수령자휴대전화",
@@ -174,7 +174,7 @@ def build(src: Path, dst: Path, cfg: dict) -> dict:
     """경동 주문은 dst, CJ 주문이 있으면 별도 CJ 파일로 만든다."""
     ws = load_workbook(src).active
     h, extra_col = locate(ws)
-    all_rows = data_rows(ws, h[KEY])
+    all_rows = active_rows(ws, h)
     kd, cj, unknown = split_rows(ws, h, all_rows, cfg)
 
     write_file(ws, h, extra_col, kd, cfg, dst)

@@ -1,0 +1,11 @@
+.git
+.claude
+.venv
+input
+output
+reports
+state
+tests
+__pycache__
+*.pyc
+.env

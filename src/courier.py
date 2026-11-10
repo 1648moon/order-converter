@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naming  # noqa: E402
 import factory as F  # noqa: E402
 import xlsxkit as xk  # noqa: E402
-from convert import KEY, data_rows  # noqa: E402
+from convert import KEY, active_rows  # noqa: E402
 
 DEFAULT_CFG = Path(__file__).resolve().parent.parent / "config" / "courier.yaml"
 TEXT_COLS = ("우편번호", "전화번호", "기타전화번호")  # 문자열 유지(앞자리 0, 긴 숫자)
@@ -83,7 +83,7 @@ def build(src: Path, dst: Path, cfg: dict) -> tuple[int, int, list[str]]:
     if miss:
         raise SystemExit(f"중간파일에 필수 컬럼 없음: {', '.join(miss)}")
     fcfg = factory_cfg()
-    src_rows = data_rows(ws, h[KEY])
+    src_rows = active_rows(ws, h)
     rows = [build_row(ws, r, h, extra_col, cfg) for r in src_rows]
     matched = [F.shipping_fee_info(ws.cell(r, h["상품명"]).value, ws.cell(r, h["선택사항"]).value, fcfg)[1]
                for r in src_rows]

@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import courier as C  # noqa: E402
 import factory as F  # noqa: E402
 import xlsxkit as xk  # noqa: E402
-from convert import KEY, data_rows  # noqa: E402
+from convert import KEY, active_rows  # noqa: E402
 from validate import norm, write_report  # noqa: E402
 
 
@@ -41,7 +41,7 @@ def validate(src: Path, out: Path, cfg: dict) -> tuple[list[tuple], int]:
         return diffs, 0
     hb = {name: i + 1 for i, name in enumerate(heads)}
 
-    ra = data_rows(a, h[KEY])
+    ra = active_rows(a, h)
     rb = [r for r in range(2, b.max_row + 1)
           if any(b.cell(r, c).value not in (None, "") for c in range(1, b.max_column + 1))]
     if len(ra) != len(rb):
