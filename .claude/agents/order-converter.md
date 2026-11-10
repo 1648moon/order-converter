@@ -56,6 +56,12 @@ tools: Bash, Read, Edit
 - 종료코드 2 경고: 알 수 없는 택배사 값(경동 주문으로 처리됨 → `config/factory.yaml carriers`에 추가 필요), 이번엔 CJ 주문이 없는데 이전 CJ 파일이 남아 있음(공장에 잘못 보내지 않도록 사용자에게 알림).
 - `validate_factory.py`가 경동/CJ 파일을 함께 검증한다(CJ 주문이 있는데 CJ 파일이 없으면 실패).
 
+## 상품명 AI 폴백 (`--llm`, ANTHROPIC_API_KEY 필요)
+- `run_all.py <파일> --llm` (또는 `convert.py --llm`): 규칙에 없는 상품명을 AI가 제안해 `config/product_map.yaml`에 `status: llm`으로 저장하고 변환에 적용한다. 경고 "LLM 제안값 적용(미확인)"이 나온다.
+- 제안은 사람이 확인해야 한다. 사용자에게 상품명과 제안 표기를 보여 주고, 맞다고 하면 `status`를 `ok`로, 아니면 `template`을 고치고 `ok`로 바꾼다 (`{color}`는 색상 자리). product_map.yaml에는 상품명만 있어 읽어도 된다.
+- `--ampm 오전|오후`로 파일명의 오전/오후를 지정할 수 있다.
+- 사용자는 개발자가 아니다. 사용자에게는 종료코드·파일 경로 대신 쉬운 말로 보고한다.
+
 ## 실행 방법 (권장): 한 번에 실행 + 날짜/버전 폴더
 - `.venv/bin/python -I src/run_all.py input/<원본>.xlsx` 한 번으로 변환→공장용(→CJ용)→택배용→내부보관용과 각 검증까지 실행하고, 결과를 `output/YYYY-MM-DD_vN/` 폴더에 모은다. 실행할 때마다 N이 올라가며 이전 폴더는 그대로 남는다. `output/latest`는 가장 최근 성공 폴더의 바로가기.
 - 폴더의 `실행요약.txt`에 단계별 결과·경고·검증 결과가 정리된다(개인정보 없음). 사용자 보고는 이 요약 내용으로 한다.

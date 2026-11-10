@@ -72,6 +72,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("src", type=Path, help="주문원본 엑셀 (예: input/주문원본1.xlsx)")
     ap.add_argument("--output-root", type=Path, default=ROOT / "output")
+    ap.add_argument("--llm", action="store_true", help="규칙에 없는 상품명을 LLM 으로 제안받아 적용 (ANTHROPIC_API_KEY 필요)")
+    ap.add_argument("--ampm", choices=["오전", "오후"], help="파일명의 오전/오후를 현재 시각 대신 지정")
     a = ap.parse_args()
     src = a.src if a.src.is_absolute() else Path.cwd() / a.src
     if not src.exists():
@@ -85,6 +87,8 @@ def main() -> int:
     run_dir.mkdir()
     stem = src.stem
     now = datetime.now()
+    if a.ampm:
+        now = now.replace(hour=9 if a.ampm == "오전" else 14)
     f = {"변환": run_dir / f"{stem}_변환.xlsx",
          "공장": run_dir / naming.factory_name(root, now),
          "택배": run_dir / naming.courier_name(now),
@@ -92,7 +96,7 @@ def main() -> int:
     env = {**os.environ, "ORDER_REPORT_DIR": str(run_dir / "검증리포트")}
 
     stages = [
-        ("변환",           ["src/convert.py", str(src), "-o", str(f["변환"])], False),
+        ("변환",           ["src/convert.py", str(src), "-o", str(f["변환"]), *(["--llm"] if a.llm else [])], False),
         ("변환 검증",       ["src/validate.py", str(src), str(f["변환"])], True),
         ("공장용",          ["src/factory.py", str(f["변환"]), "-o", str(f["공장"])], False),
         ("공장용 검증",     ["src/validate_factory.py", str(f["변환"]), str(f["공장"])], True),
