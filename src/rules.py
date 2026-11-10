@@ -71,17 +71,22 @@ def find_rule(name, terms: dict):
     return None
 
 
+def render(template: str, **values) -> str:
+    """템플릿 채우기. 색상이 비면(선택사항에 색상 없음) '/색상' 자리를 적지 않는다.
+    '삼천리SL360사슬형번호키자물쇠/{color}{count}' + color='' -> '삼천리SL360사슬형번호키자물쇠' (count 가 있으면 '…/2개')."""
+    if not values.get("color"):
+        template = template.replace("/{color}", "{color}")   # '빅마운틴/{color}(2026)' -> '빅마운틴(2026)'
+    return template.format(**values)
+
+
 def convert_product(name, option, terms: dict):
-    """(변환값, 경고). 변환 불가 시 (원본값, 경고메시지)."""
+    """(변환값, 경고). 변환 불가 시 (원본값, 경고메시지). 색상이 없으면 '/색상' 부분은 생략한다."""
     text = _s(name)
     plain = text.replace(" ", "")
     for rule in terms["products"]:
         if all(k.replace(" ", "") in plain for k in rule["contains"]):
             values = {}
-            color = extract_color(option, terms)
-            if color is None:
-                return name, "색상을 선택사항에서 찾지 못함"
-            values["color"] = color
+            values["color"] = extract_color(option, terms) or ""
             values["count"] = count_suffix(option)
             for var, pats in (rule.get("vars") or {}).items():
                 for pat in pats:
@@ -91,13 +96,10 @@ def convert_product(name, option, terms: dict):
                         break
                 else:
                     return name, f"상품명에서 '{var}' 값을 찾지 못함"
-            return rule["template"].format(**values), None
+            return render(rule["template"], **values), None
     hit = (terms.get("_map") or {}).get(plain)
     if hit:
-        color = extract_color(option, terms)
-        if color is None and "{color}" in hit["template"]:
-            return name, "색상을 선택사항에서 찾지 못함"
-        value = hit["template"].format(color=color, count=count_suffix(option))
+        value = render(hit["template"], color=extract_color(option, terms) or "", count=count_suffix(option))
         return value, (LLM_WARN if hit["status"] != "ok" else None)
     return name, "변환 표에 없는 상품"
 
