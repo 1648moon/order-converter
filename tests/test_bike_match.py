@@ -38,8 +38,11 @@ def model_key(name, terms):
         elif key == "빅마운틴":
             note += " - 연식 없음, 확인 필요"
         return key, note
+    rule = rules.find_rule(n, terms)
+    if rule and rule.get("blank_option"):   # 용품(헬멧·자물쇠 등) 규칙은 내부보관용 대상이 아님
+        return "", ""
     out, w = rules.convert_product(n, f"색상: {SENT}", terms)
-    if w is None and out != n and "삼천리SH700" not in out and "삼천리SPS110" not in out:
+    if w is None and out != n:
         return out.replace(f"/{SENT}", ""), ""
     if w and w != "변환 표에 없는 상품":
         return "", f"확인 필요: {w}"
