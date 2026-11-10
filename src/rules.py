@@ -8,6 +8,7 @@ import yaml
 
 DEFAULT_TERMS = Path(__file__).resolve().parent.parent / "config" / "terms.yaml"
 DEFAULT_MAP = DEFAULT_TERMS.with_name("product_map.yaml")
+STORAGE_CFG = DEFAULT_TERMS.with_name("storage.yaml")   # 내부 정산(내부보관용)의 축약 자전거명 목록(product_list)
 LLM_WARN = "LLM 제안값 적용(미확인)"   # convert_product 경고 접두어. 확인 후 product_map.yaml 의 status 를 ok 로
 
 
@@ -27,9 +28,17 @@ def save_product_map(entries: dict, path: Path = DEFAULT_MAP) -> None:
                           encoding="utf-8")
 
 
+def load_bike_names(path: Path = STORAGE_CFG) -> list[str]:
+    """내부 정산 파일에 쓰는 축약 자전거명 목록 (예: '시애틀MT24/블랙'). 파일이 없으면 빈 리스트."""
+    p = Path(path)
+    data = (yaml.safe_load(p.read_text(encoding="utf-8")) or {}) if p.exists() else {}
+    return [str(x) for x in (data.get("product_list") or [])]
+
+
 def load_terms(path: Path = DEFAULT_TERMS, map_path: Path = DEFAULT_MAP) -> dict:
     terms = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     terms["_map"] = load_product_map(map_path)
+    terms["_bikes"] = load_bike_names()
     return terms
 
 

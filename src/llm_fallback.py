@@ -24,15 +24,29 @@ def _examples(terms: dict) -> list[tuple[str, str]]:
             if v.get("status") == "ok"][:MAX_EXAMPLES]
 
 
+def bike_templates(terms: dict) -> list[str]:
+    """축약 자전거명 목록 -> 색상 자리를 {color} 로 바꾼 템플릿 (중복 제거, 순서 유지).
+    '시애틀MT24/블랙' -> '시애틀MT24/{color}',  '빅마운틴/블랙(2026)' -> '빅마운틴/{color}(2026)'."""
+    seen: dict[str, None] = {}
+    for n in terms.get("_bikes") or []:
+        m = re.match(r"^(.+?/)(\d*)([^()\d]+?)(\(.*\))?$", n)   # 엑스퍼트/380블랙화이트: 사이즈 숫자는 유지
+        seen[f"{m.group(1)}{m.group(2)}{{color}}{m.group(4) or ''}" if m else n] = None
+    return list(seen)
+
+
 def build_prompt(names: list[str], terms: dict) -> str:
     rules = "\n".join(f'- 원본 상품명에 {r["contains"]} 포함 -> 템플릿 {r["template"]!r}'
                       for r in terms["products"])
     ex = "\n".join(f"{a!r} -> {b!r}" for a, b in _examples(terms)) or "(아직 없음)"
     items = json.dumps(names, ensure_ascii=False)
+    bikes = "\n".join(f"- {t}" for t in bike_templates(terms)) or "(없음)"
     return f"""쇼핑몰 주문의 상품명을 공장 전달용 표기로 바꾸는 템플릿을 만든다.
 
 기존 규칙 예시(이 표기 스타일을 따를 것):
 {rules}
+
+내부 정산 파일에서 쓰는 자전거 축약명 (자전거는 반드시 이 표기를 따를 것):
+{bikes}
 
 확정된 매핑 예시:
 {ex}
@@ -40,6 +54,8 @@ def build_prompt(names: list[str], terms: dict) -> str:
 규칙:
 - 템플릿에서 색상 자리는 반드시 {{color}} 로 쓴다 (색상은 코드가 따로 채운다). 다른 중괄호 변수는 쓰지 말 것.
 - 헬멧·보호대 같은 소품은 맨 끝에 {{count}} 를 붙인다 (코드가 2개 이상일 때만 '/2개' 로 채운다). 자전거에는 붙이지 않는다.
+- 자전거는 위 축약명 목록의 모델·사이즈·연식 표기를 그대로 쓰고 색상 자리만 {{color}} 로 한다.
+  (예: 상품명에 '시애틀 MT 24인치'가 있으면 '시애틀MT24/{{color}}'). 목록에 없는 모델이면 같은 규칙('모델명+사이즈/{{color}}')으로 짧게 만들되 확신이 없으면 null.
 - 소품 표기 예: '삼천리SH700어린이어반헬멧/{{color}}{{count}}' (브랜드+모델코드+대상+품목 순으로 짧게, 수식어·마케팅 문구는 버린다).
 - 상품명에 색상이 안 들어 있으면 {{color}} 만 넣고, 원본에 없는 정보(연식·사이즈)를 지어내지 말 것.
 - 확신이 없으면 그 상품은 null 로 둔다. 틀린 값을 내는 것보다 null 이 낫다.
