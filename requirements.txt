@@ -1,3 +1,5 @@
 openpyxl
 pandas
 pyyaml
+flask
+discord.py
