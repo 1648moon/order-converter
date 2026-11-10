@@ -40,17 +40,17 @@ docker --version
 ## 4. 앱 올리기
 GitHub 비공개 저장소를 쓰는 경우(권장):
 ```bash
-git clone https://github.com/<계정>/<저장소>.git jimini && cd jimini
+git clone https://github.com/<계정>/<저장소>.git order-converter && cd order-converter
 ```
 저장소 없이 내 맥에서 직접 보낼 때(`input/`, `output/` 등 개인정보 폴더는 제외):
 ```bash
 rsync -av --exclude '.git' --exclude '.venv' --exclude 'input' --exclude 'output' \
-  --exclude 'reports' --exclude '.claude' ./ ubuntu@<서버 IP>:~/jimini/
+  --exclude 'reports' --exclude '.claude' ./ ubuntu@<서버 IP>:~/order-converter/
 ```
 
 비밀번호 설정 후 실행:
 ```bash
-cd ~/jimini
+cd ~/order-converter
 echo "APP_PASSWORD=긴-비밀번호-입력" > .env && chmod 600 .env
 docker compose up -d --build
 docker compose ps          # app 이 running 인지 확인
