@@ -1,21 +1,22 @@
-"""텔레그램 봇의 접속과 무관한 부분 테스트.
-실행: <venv>/bin/python -I tests/test_telegram_bot.py [샘플.xlsx]   (샘플을 주면 변환 파이프라인까지 확인)
+"""디스코드 봇의 접속과 무관한 부분 테스트.
+실행: <venv>/bin/python -I tests/test_discord_bot.py [샘플.xlsx]   (샘플을 주면 변환 파이프라인까지 확인)
 """
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-import telegram_bot as T  # noqa: E402
+import discord_bot as T  # noqa: E402
 
 assert T.parse_ids("111, -222\n333,abc") == {111, -222, 333}
 assert T.parse_ids("") == set()
+assert T.chunks("a" * 4000) == ["a" * 1900, "a" * 1900, "a" * 200] and T.chunks("") == [""]
 assert T.safe_name("주문 원본(1).xlsx") == "주문_원본_1_.xlsx"
 with tempfile.TemporaryDirectory() as d:
     env = Path(d) / ".env"
-    env.write_text("# c\nTELEGRAM_BOT_TOKEN='abc:def'\nTELEGRAM_ALLOWED_CHAT_IDS=1,2\n", encoding="utf-8")
+    env.write_text("# c\nDISCORD_BOT_TOKEN='abc:def'\nDISCORD_ALLOWED_USER_IDS=1,2\n", encoding="utf-8")
     e = T.load_env(env)
-    assert e["TELEGRAM_BOT_TOKEN"] == "abc:def" and T.parse_ids(e["TELEGRAM_ALLOWED_CHAT_IDS"]) == {1, 2}
+    assert e["DISCORD_BOT_TOKEN"] == "abc:def" and T.parse_ids(e["DISCORD_ALLOWED_USER_IDS"]) == {1, 2}
     assert T.load_env(Path(d) / "none") == {}
     out = Path(d) / "o"
     out.mkdir()
