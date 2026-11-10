@@ -3,10 +3,13 @@
     .venv/bin/python src/serve.py        ->  http://127.0.0.1:8765
 
 .env (커밋 금지)에 DISCORD_TOKEN, DISCORD_CHANNEL_ID, DISCORD_OWNER_ID, BRAND_NAME 을 적는다.
+OUTPUT_ROOT / INPUT_ROOT (절대경로, 선택)를 적으면 어느 폴더(워크트리 포함)에서 실행해도
+결과·업로드 파일이 그 경로에 저장된다. 이 폴더에 .env 가 없으면 메인 저장소의 .env 를 읽는다.
 """
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -27,11 +30,37 @@ def load_env(path: Path) -> None:
             os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 
+def main_checkout_root() -> Path:
+    """워크트리에서 실행해도 메인 저장소 폴더를 돌려준다(.git 공용 폴더의 부모)."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                             cwd=ROOT, capture_output=True, text=True, timeout=10, check=True).stdout.strip()
+        return Path(out).parent
+    except Exception:
+        return ROOT
+
+
+def env_path(name: str, default: Path) -> Path:
+    v = os.environ.get(name)
+    if not v:
+        return default
+    p = Path(v).expanduser()
+    if not p.is_absolute():
+        raise SystemExit(f"{name} 는 절대경로로 적어주세요: {v}")
+    return p
+
+
 def main() -> None:
-    load_env(ROOT / ".env")
-    notifier = discord_notify.Notifier.from_env(ROOT / "output")
+    env_file = ROOT / ".env"
+    if not env_file.exists():
+        env_file = main_checkout_root() / ".env"
+    load_env(env_file)
+    input_dir = env_path("INPUT_ROOT", ROOT / "input")
+    output_root = env_path("OUTPUT_ROOT", ROOT / "output")
+    print(f"결과 저장 위치: {output_root}")
+    notifier = discord_notify.Notifier.from_env(output_root)
     notifier.start()
-    app = webapp.create_app(ROOT, notify=notifier.notify)
+    app = webapp.create_app(ROOT, notify=notifier.notify, input_dir=input_dir, output_root=output_root)
     port = int(os.environ.get("WEB_PORT", "8765"))
     print(f"웹 페이지: http://127.0.0.1:{port}  (이 컴퓨터에서만 접속 가능)")
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)

@@ -54,11 +54,15 @@ PAGE = """<!doctype html><html lang="ko"><meta charset="utf-8">
 
 
 def create_app(root: Path = ROOT, notify: Callable[[str], None] | None = None,
-               runner: Callable[[Path, Path], None] | None = None) -> Flask:
-    """runner(src_xlsx, output_root): 변환 실행. 기본값은 run_all.py 호출 (테스트에서 교체 가능)."""
+               runner: Callable[[Path, Path], None] | None = None,
+               input_dir: Path | None = None, output_root: Path | None = None) -> Flask:
+    """runner(src_xlsx, output_root): 변환 실행. 기본값은 run_all.py 호출 (테스트에서 교체 가능).
+
+    input_dir / output_root 를 주면 root 아래 input/·output/ 대신 그 경로를 쓴다."""
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
-    input_dir, output_root = root / "input", root / "output"
+    input_dir = Path(input_dir) if input_dir else root / "input"
+    output_root = Path(output_root) if output_root else root / "output"
     notify = notify or (lambda text: None)
 
     def default_runner(src: Path, out: Path) -> None:
