@@ -13,6 +13,7 @@ import openpyxl, rules  # noqa: E402
 
 # 이미 축약형으로 적혀 있는 값 (변환 대상 아님)
 ALREADY = re.compile(r"^(시애틀\S*|빅마운틴|엑스퍼트|부스터24)(/|$)")
+NEW_MODELS = {"첼로부스터24"}   # 내부보관용 표에 아직 없지만 표기를 정해 둔 모델
 
 
 def models(bikes):
@@ -35,7 +36,7 @@ def main(path):
             if "삼천리SH700" in out or "삼천리SPS110" in out:   # 소품 규칙
                 nobike.append((n, out)); continue
             model = out.split("/")[0]
-            (ok if model in mset or any(out.startswith(m) for m in mset) else warn).append((n, out, "모델이 product_list 에 없음"))
+            (ok if model in mset or model in NEW_MODELS or any(out.startswith(m) for m in mset) else warn).append((n, out, "모델이 product_list 에 없음"))
         elif w and w != "변환 표에 없는 상품":
             warn.append((n, out, w))
         else:
