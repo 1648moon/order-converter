@@ -9,3 +9,4 @@ __pycache__/
 .env
 .discord_sessions.json
 state/
+.env.example
