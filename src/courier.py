@@ -4,7 +4,9 @@
     .venv/bin/python src/courier.py output/주문원본1_변환.xlsx
     .venv/bin/python src/courier.py output/주문원본1_변환.xlsx -o output/택배.xlsx
 
-종료코드: 0 정상 / 2 경고(수량이 1이 아닌 주문 있음 - 택배 수량은 1로 고정되므로 확인 필요)
+종료코드: 0 정상 / 2 경고(수량을 읽을 수 없는 주문 또는 운임표에 없는 상품 있음)
+
+수량이 1 초과인 주문은 같은 행을 수량만큼 반복해 넣는다(택배 수량 칸은 항상 1).
 """
 from __future__ import annotations
 
@@ -80,6 +82,15 @@ def build_row(ws, r: int, h: dict, extra_col: int, cfg: dict) -> dict:
     return row
 
 
+def repeat_by_qty(ws, h: dict, rows: list[int]) -> list[int]:
+    """수량이 1 초과인 주문은 같은 행을 수량만큼 반복한다(택배 수량은 항상 1). 수량이 정수가 아니면 1번만."""
+    out = []
+    for r in rows:
+        q = F.qty(ws.cell(r, h["수량"]).value)
+        out.extend([r] * (q if isinstance(q, int) and q > 1 else 1))
+    return out
+
+
 def need_columns(cfg: dict) -> list[str]:
     return ["수령자", "수량", "상품명", "선택사항", "택배사", *cfg["copy"].values(), *cfg["phone_sources"]]
 
@@ -91,11 +102,14 @@ def build(src: Path, dst: Path, cfg: dict) -> tuple[int, int, list[str]]:
     if miss:
         raise SystemExit(f"중간파일에 필수 컬럼 없음: {', '.join(miss)}")
     fcfg = factory_cfg()
-    src_rows = active_rows(ws, h)
+    base_rows = active_rows(ws, h)
+    src_rows = repeat_by_qty(ws, h, base_rows)
     rows = [build_row(ws, r, h, extra_col, cfg) for r in src_rows]
     matched = [fee_for(ws, r, h)[1] for r in src_rows]
     unmatched = sorted({F._s(ws.cell(r, h["상품명"]).value) for r, ok in zip(src_rows, matched) if not ok})
-    not_one = sum(1 for r in src_rows if F.qty(ws.cell(r, h["수량"]).value) != 1)
+    # 수량은 행 반복으로 처리되므로, 정수 1 이상이 아닌(읽을 수 없는) 수량만 경고한다
+    not_one = sum(1 for r in base_rows
+                  if not (isinstance(F.qty(ws.cell(r, h["수량"]).value), int) and F.qty(ws.cell(r, h["수량"]).value) >= 1))
 
     heads = cfg["headers"]
     wb, o = xk.open_template(cfg["template"], heads)
@@ -129,7 +143,7 @@ def main() -> int:
     n, not_one, unmatched = build(a.src, dst, load_cfg(a.config))
     print(f"택배용 파일 생성: {dst} ({n}행)")
     if not_one:
-        print(f"  경고: 수량이 1이 아닌 주문 {not_one}건 - 택배 수량은 1로 고정됩니다. 확인 필요")
+        print(f"  경고: 수량을 읽을 수 없는 주문 {not_one}건 - 1건으로 처리됨. 확인 필요")
     for name in unmatched:
         print(f"  경고: 운임표에 없는 상품 '{name}' - 기본운임 적용됨. config/factory.yaml shipping_rules 에 추가 필요")
     return 2 if (not_one or unmatched) else 0
