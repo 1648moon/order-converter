@@ -53,7 +53,9 @@ def extract_color(option, terms: dict) -> str | None:
         if m:
             color = re.sub(r"\(.*?\)", "", m.group(1))          # 라이트핑크(무광) -> 라이트핑크
             color = re.sub(r"[-\s]*\d+\s*개$", "", color)       # 블루-1개 -> 블루
-            return color.strip() or None
+            if color.strip():
+                return color.strip()
+            # 비었으면(예: '미조립 1개' 에서 '1개' 만 잡힘) 다음 패턴을 계속 시도한다
     return None
 
 
@@ -76,6 +78,8 @@ def render(template: str, **values) -> str:
     '삼천리SL360사슬형번호키자물쇠/{color}{count}' + color='' -> '삼천리SL360사슬형번호키자물쇠' (count 가 있으면 '…/2개')."""
     if not values.get("color"):
         template = template.replace("/{color}", "{color}")   # '빅마운틴/{color}(2026)' -> '빅마운틴(2026)'
+    for var in [k for k, v in values.items() if not v]:       # 값이 빈 변수의 '({var})' 괄호째 생략
+        template = template.replace(f"({{{var}}})", "")       # '빅마운틴/{color}({year})' + year='' -> '빅마운틴/{color}'
     return template.format(**values)
 
 
@@ -83,11 +87,14 @@ def convert_product(name, option, terms: dict):
     """(변환값, 경고). 변환 불가 시 (원본값, 경고메시지). 색상이 없으면 '/색상' 부분은 생략한다."""
     text = _s(name)
     plain = text.replace(" ", "")
+    if plain in {_s(x).replace(" ", "") for x in terms.get("passthrough_products") or []}:
+        return name, None       # 이름을 바꾸지 않는 상품(예: 추가상품). 경고 없이 원본 유지
     for rule in terms["products"]:
         if all(k.replace(" ", "") in plain for k in rule["contains"]):
             values = {}
             values["color"] = extract_color(option, terms) or ""
             values["count"] = count_suffix(option)
+            skip = False
             for var, pats in (rule.get("vars") or {}).items():
                 for pat in pats:
                     m = re.search(pat, text)
@@ -95,7 +102,15 @@ def convert_product(name, option, terms: dict):
                         values[var] = m.group(1)
                         break
                 else:
+                    if var in (rule.get("optional_vars") or []):
+                        values[var] = ""      # 없어도 되는 값(예: 연식): 공란으로 두고 템플릿에서 괄호째 생략
+                        continue
+                    if rule.get("fallthrough"):
+                        skip = True           # 값을 못 찾으면 경고 대신 아래의 다음 규칙으로 넘어간다
+                        break
                     return name, f"상품명에서 '{var}' 값을 찾지 못함"
+            if skip:
+                continue
             return render(rule["template"], **values), None
     hit = (terms.get("_map") or {}).get(plain)
     if hit:
@@ -106,6 +121,8 @@ def convert_product(name, option, terms: dict):
 
 def convert_option(option, terms: dict, name=None):
     """name 을 주면, blank_option 이 켜진 상품(소품: 색상·수량이 상품명에 들어감)은 선택사항을 빈칸으로."""
+    if name is not None and _s(name).replace(" ", "") in {_s(x).replace(" ", "") for x in terms.get("passthrough_products") or []}:
+        return option, None     # 추가상품: 선택사항('┗삼천리흙받이')도 그대로. 공장용에서 상품옵션으로 들어간다
     rule = find_rule(name, terms) if name is not None else None
     if rule and rule.get("blank_option"):
         return None, None
