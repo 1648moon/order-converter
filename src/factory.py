@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -39,8 +40,27 @@ REQUIRED = ["수령자", "우편번호", "주소", "수령자전화번호", "수
             "수량", "상품명", "선택사항", "추가구성", "배송메모", "택배사", KEY]
 
 
+def local_path(path: Path = DEFAULT_CFG) -> Path:
+    """실제 운임 등 커밋하지 않는 값을 두는 파일: factory.yaml 옆의 factory.local.yaml (.gitignore 대상)."""
+    p = Path(path)
+    return p.with_name(f"{p.stem}.local{p.suffix}")
+
+
+def _merge(base, over):
+    """딕셔너리는 항목별로 덮어쓰고, 그 밖(리스트 포함)은 통째로 교체한다."""
+    if isinstance(base, dict) and isinstance(over, dict):
+        return {**base, **{k: _merge(base.get(k), v) if k in base else v for k, v in over.items()}}
+    return over
+
+
 def load_cfg(path: Path = DEFAULT_CFG) -> dict:
-    return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    """factory.yaml 을 읽고, factory.local.yaml 이 있으면 그 값으로 덮어쓴다 (예: shipping_rules, default_fee, carriers.cj_fee).
+    환경변수 FACTORY_IGNORE_LOCAL=1 이면 로컬 파일을 무시한다 (샘플값 기준 테스트용)."""
+    cfg = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    local = local_path(path)
+    if local.exists() and not os.environ.get("FACTORY_IGNORE_LOCAL"):
+        cfg = _merge(cfg, yaml.safe_load(local.read_text(encoding="utf-8")) or {})
+    return cfg
 
 
 def _s(v) -> str:
