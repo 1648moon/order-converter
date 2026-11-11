@@ -93,6 +93,18 @@ def convert(src: Path, dst: Path, terms: dict, use_llm: bool = False,
         ws.cell(r, h["상품명"]).value = new_name
         ws.cell(r, h["선택사항"]).value = new_opt
 
+    # 1-1) 부품(단가 <= parts_rule.max_unit_price)은 택배사를 CJ 로
+    if "단가" in h and "택배사" in h:
+        n_part = 0
+        for r in rows:
+            cur = ws.cell(r, h["택배사"]).value
+            new = rules.expected_carrier(cur, ws.cell(r, h["단가"]).value, terms)
+            if new != cur:
+                ws.cell(r, h["택배사"]).value = new
+                n_part += 1
+        if n_part:
+            print(f"부품(단가 {terms['parts_rule']['max_unit_price']:,}원 이하) {n_part}건의 택배사를 {terms['parts_rule']['carrier']}로 변경했습니다.")
+
     # 2) 신규 컬럼 삽입 (서식·열너비 이동 포함)
     pos = h[terms["insert_column"]["after"]] + 1
     widths = {}

@@ -225,3 +225,9 @@ insert_column:
   after: "수령자"
   header: ""
   address_chars: 3
+
+# 부품 자동 처리: 원본 '단가'가 max_unit_price 원 이하인 주문은 부품으로 보고 택배사를 무조건 carrier 로 바꾼다
+# (경동 대상이어도 CJ 로 간다). carrier 값은 config/factory.yaml carriers.cj 에 있는 표기여야 한다.
+parts_rule:
+  max_unit_price: 100000
+  carrier: "CJ택배"

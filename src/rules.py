@@ -141,6 +141,31 @@ def convert_option(option, terms: dict, name=None):
     return option, "변환 표에 없는 선택사항"
 
 
+def unit_price(v) -> float | None:
+    """'단가' 셀 값 -> 숫자. 숫자가 아니거나 비었으면 None ('12,000원' 같은 문자열도 허용)."""
+    if isinstance(v, bool) or v in (None, ""):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = re.sub(r"[,\s원]", "", str(v))
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
+def is_part(price, terms: dict) -> bool:
+    """단가가 parts_rule.max_unit_price 이하면 부품. 단가를 읽을 수 없으면 부품으로 보지 않는다."""
+    rule = terms.get("parts_rule") or {}
+    p = unit_price(price)
+    return bool(rule) and p is not None and p <= rule["max_unit_price"]
+
+
+def expected_carrier(carrier, price, terms: dict):
+    """부품이면 parts_rule.carrier, 아니면 원래 택배사 값 그대로."""
+    return terms["parts_rule"]["carrier"] if is_part(price, terms) else carrier
+
+
 def make_extra(receiver, address, terms: dict) -> str:
     n = terms["insert_column"]["address_chars"]
     return f"{_s(receiver)}({_s(address).strip()[:n]})"

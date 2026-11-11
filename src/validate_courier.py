@@ -7,7 +7,7 @@
   1. 헤더가 설정(config/courier.yaml)과 정확히 같은지
   2. 행 수
   3. 공통 정보: 받는분/주소/우편번호/품목명/메모/전화번호(기타전화번호 포함)가 중간파일과 동일
-  4. 고정값(선불후불/수량/포장상태/기타운임/개별단가), 배송운임(=공장파일 택배운임 규칙)과, 값을 넣지 않기로 한 컬럼이 비어 있는지
+  4. 고정값(선불후불/수량/포장상태/기타운임/개별단가), 배송운임(=공장파일 택배운임 규칙, CJ 주문은 cj_fee 고정)과, 값을 넣지 않기로 한 컬럼이 비어 있는지
 상세(값 포함)는 reports/ CSV에만 기록하고 화면에는 건수·위치만 출력한다.
 종료코드: 0 통과 / 1 불일치
 """
@@ -66,7 +66,7 @@ def validate(src: Path, out: Path, cfg: dict) -> tuple[list[tuple], int]:
     # 운임표에 없는 상품은 배송운임 셀에 경고색, 그 외에는 경고색이 없어야 함
     fcfg = C.factory_cfg()
     for r1, r2 in zip(ra, rb):
-        ok = F.shipping_fee_info(a.cell(r1, h["상품명"]).value, a.cell(r1, h["선택사항"]).value, fcfg)[1]
+        ok = C.fee_for(a, r1, h)[1]
         if xk.is_warning(b.cell(r2, hb["배송운임"]), fcfg["warning"]) == ok:
             diffs.append(("경고표시", r2, "배송운임", "경고색 없음" if ok else "경고색", "경고색" if ok else "경고색 없음"))
     tws = load_workbook(xk.ROOT / cfg["template"]).active
