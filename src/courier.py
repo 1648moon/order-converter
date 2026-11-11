@@ -58,6 +58,14 @@ def phone(ws, r: int, h: dict, cfg: dict):
     return None
 
 
+def fee_for(ws, r: int, h: dict) -> tuple[int, bool]:
+    """(배송운임, 운임표 일치 여부). CJ 주문(부품 포함)은 공장 CJ 파일과 같이 cj_fee 고정."""
+    fcfg = factory_cfg()
+    if F.carrier_kind(ws.cell(r, h["택배사"]).value, fcfg) == "cj":
+        return fcfg["carriers"]["cj_fee"], True
+    return F.shipping_fee_info(ws.cell(r, h["상품명"]).value, ws.cell(r, h["선택사항"]).value, fcfg)
+
+
 def build_row(ws, r: int, h: dict, extra_col: int, cfg: dict) -> dict:
     row = {name: None for name in cfg["headers"]}
     row["받는분"] = ws.cell(r, extra_col).value
@@ -68,12 +76,12 @@ def build_row(ws, r: int, h: dict, extra_col: int, cfg: dict) -> dict:
     ph = phone(ws, r, h, cfg)
     row["전화번호"] = row["기타전화번호"] = ph
     row.update(cfg["fixed"])
-    row["배송운임"] = F.shipping_fee(ws.cell(r, h["상품명"]).value, ws.cell(r, h["선택사항"]).value, factory_cfg())
+    row["배송운임"] = fee_for(ws, r, h)[0]
     return row
 
 
 def need_columns(cfg: dict) -> list[str]:
-    return ["수령자", "수량", "상품명", "선택사항", *cfg["copy"].values(), *cfg["phone_sources"]]
+    return ["수령자", "수량", "상품명", "선택사항", "택배사", *cfg["copy"].values(), *cfg["phone_sources"]]
 
 
 def build(src: Path, dst: Path, cfg: dict) -> tuple[int, int, list[str]]:
@@ -85,9 +93,8 @@ def build(src: Path, dst: Path, cfg: dict) -> tuple[int, int, list[str]]:
     fcfg = factory_cfg()
     src_rows = active_rows(ws, h)
     rows = [build_row(ws, r, h, extra_col, cfg) for r in src_rows]
-    matched = [F.shipping_fee_info(ws.cell(r, h["상품명"]).value, ws.cell(r, h["선택사항"]).value, fcfg)[1]
-               for r in src_rows]
-    unmatched = F.fee_warnings(ws, h, src_rows, fcfg)
+    matched = [fee_for(ws, r, h)[1] for r in src_rows]
+    unmatched = sorted({F._s(ws.cell(r, h["상품명"]).value) for r, ok in zip(src_rows, matched) if not ok})
     not_one = sum(1 for r in src_rows if F.qty(ws.cell(r, h["수량"]).value) != 1)
 
     heads = cfg["headers"]

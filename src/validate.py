@@ -7,7 +7,7 @@
 검증 항목
   1. 헤더: 원본 헤더 순서 + 신규(빈 헤더) 컬럼 1개 외에 차이 없음
   2. 행: 행 수, 주문번호 목록과 순서 동일
-  3. 공통 컬럼: 변환 대상(상품명/선택사항/신규컬럼) 외 모든 컬럼의 셀 값 동일
+  3. 공통 컬럼: 변환 대상(상품명/선택사항/신규컬럼) 외 모든 컬럼의 셀 값 동일 (택배사는 부품 규칙 적용 후 기대값과 비교)
   4. 변환 컬럼: 원본에 규칙을 다시 적용한 기대값과 일치
 상세 불일치(실제 값 포함)는 reports/ 의 CSV에만 기록하고, 화면에는 건수·위치만 출력한다.
 종료코드: 0 통과 / 1 불일치 있음
@@ -76,6 +76,8 @@ def validate(src: Path, out: Path, terms: dict) -> list[tuple]:
             v1, v2 = a.cell(r1, c1).value, b.cell(r2, hb[name]).value
             if name in transformed:
                 continue
+            if name == "택배사" and "단가" in ha:     # 부품(단가 이하)은 CJ 로 바뀌는 것이 기대값
+                v1 = rules.expected_carrier(v1, a.cell(r1, ha["단가"]).value, terms)
             if norm(v1) != norm(v2):
                 diffs.append(("공통값", r2, name, v1, v2))
         opt = a.cell(r1, ha["선택사항"]).value

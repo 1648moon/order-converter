@@ -133,12 +133,38 @@ def convert_option(option, terms: dict, name=None):
     for rule in terms["options"]:
         if rule["keyword"] in text:
             return (rule["value"] or None), None
-    # 선택사항에 조립 여부가 없어도 상품명에 '완전조립'이 있으면 완전조립으로 본다 (선택사항에 있는 조립 표기가 우선)
-    if name is not None and "완전조립" in _s(name).replace(" ", ""):
+    # 선택사항에 조립 여부가 없어도 상품명에 '완전조립'/'미조립'이 있으면 그것으로 본다 (선택사항에 있는 조립 표기가 우선)
+    if name is not None:
+        plain = _s(name).replace(" ", "")
         for rule in terms["options"]:
-            if rule["keyword"] == "완전조립":
+            if rule["keyword"] in plain:
                 return (rule["value"] or None), None
     return option, "변환 표에 없는 선택사항"
+
+
+def unit_price(v) -> float | None:
+    """'단가' 셀 값 -> 숫자. 숫자가 아니거나 비었으면 None ('12,000원' 같은 문자열도 허용)."""
+    if isinstance(v, bool) or v in (None, ""):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = re.sub(r"[,\s원]", "", str(v))
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
+def is_part(price, terms: dict) -> bool:
+    """단가가 parts_rule.max_unit_price 이하면 부품. 단가를 읽을 수 없으면 부품으로 보지 않는다."""
+    rule = terms.get("parts_rule") or {}
+    p = unit_price(price)
+    return bool(rule) and p is not None and p <= rule["max_unit_price"]
+
+
+def expected_carrier(carrier, price, terms: dict):
+    """부품이면 parts_rule.carrier, 아니면 원래 택배사 값 그대로."""
+    return terms["parts_rule"]["carrier"] if is_part(price, terms) else carrier
 
 
 def make_extra(receiver, address, terms: dict) -> str:
