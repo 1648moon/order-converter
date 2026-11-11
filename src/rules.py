@@ -133,10 +133,11 @@ def convert_option(option, terms: dict, name=None):
     for rule in terms["options"]:
         if rule["keyword"] in text:
             return (rule["value"] or None), None
-    # 선택사항에 조립 여부가 없어도 상품명에 '완전조립'이 있으면 완전조립으로 본다 (선택사항에 있는 조립 표기가 우선)
-    if name is not None and "완전조립" in _s(name).replace(" ", ""):
+    # 선택사항에 조립 여부가 없어도 상품명에 '완전조립'/'미조립'이 있으면 그것으로 본다 (선택사항에 있는 조립 표기가 우선)
+    if name is not None:
+        plain = _s(name).replace(" ", "")
         for rule in terms["options"]:
-            if rule["keyword"] == "완전조립":
+            if rule["keyword"] in plain:
                 return (rule["value"] or None), None
     return option, "변환 표에 없는 선택사항"
 
