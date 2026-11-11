@@ -32,6 +32,12 @@ assert rules.convert_product("엑스퍼트 픽시 510네온그린", "", t)[0] ==
 assert rules.convert_product("엑스퍼트 픽시 440블랙화이트", "", t)[0] == "엑스퍼트/440블랙화이트"   # 이미 블랙이 적혀 있어도 동일
 assert rules.convert_product("엑스퍼트 픽시", "", t) == ("엑스퍼트", None)    # 사이즈·색상이 상품명에 없으면 기존 기본 규칙
 
+# 4) 상품명에 '완전조립'이 있으면 선택사항에 조립 표기가 없어도 완전조립(100%조립요청)
+fx = "[프리기어/완전조립] 삼천리자전거 700C 엑스퍼트 알루미늄 프레임 학생 출퇴근 입문용 픽시, 164cm, 1개, 440화이트"
+assert rules.convert_option("440화이트 1개 164cm 700c", t, fx) == ("100%조립요청", None)
+assert rules.convert_option("440화이트 1개 164cm 700c", t, "[미조립/박스] 엑스퍼트 440화이트")[1] is not None   # 미조립 상품은 그대로(경고)
+assert rules.convert_option("다크실버/미조립 1개", t, "빅마운틴 완전조립 어쩌고") == (None, None)       # 선택사항의 미조립이 우선
+
 assert "엑스퍼트/440블랙화이트" in t["_bikes"]       # 집계표 목록과 이름이 실제로 일치
 
 print("OK")
