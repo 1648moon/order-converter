@@ -16,7 +16,7 @@ assert rules.convert_option("┗삼천리흙받이", t, "추가상품") == ("┗
 
 # 2) 연식 없는 빅마운틴: 공란 + 괄호 생략 / 연식 있으면 기존대로
 v, w = rules.convert_product("[삼천리자전거] 빅마운틴 26 생활형 MTB 21단", "블랙 1개 170cm 완전조립", t)
-assert (v, w) == ("빅마운틴/블랙", None), (v, w)
+assert (v, w) == ("빅마운틴/블랙(2026)", None), (v, w)      # 연식 없으면 2026
 v, w = rules.convert_product("2026년형 삼천리자전거 컴포트 MTB 빅마운틴 21단 26", "색상:다크실버", t)
 assert (v, w) == ("빅마운틴/다크실버(2026)", None), (v, w)
 

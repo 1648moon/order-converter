@@ -102,8 +102,11 @@ def convert_product(name, option, terms: dict):
                         values[var] = m.group(1)
                         break
                 else:
+                    if var in (rule.get("defaults") or {}):
+                        values[var] = str(rule["defaults"][var])   # 상품명에 없으면 기본값 (예: 연식 -> 2026)
+                        continue
                     if var in (rule.get("optional_vars") or []):
-                        values[var] = ""      # 없어도 되는 값(예: 연식): 공란으로 두고 템플릿에서 괄호째 생략
+                        values[var] = ""      # 없어도 되는 값: 공란으로 두고 템플릿에서 괄호째 생략
                         continue
                     if rule.get("fallthrough"):
                         skip = True           # 값을 못 찾으면 경고 대신 아래의 다음 규칙으로 넘어간다
