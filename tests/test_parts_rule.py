@@ -29,3 +29,10 @@ o = load_workbook(d / "out.xlsx").active
 h = convert.header_map(o)
 assert [o.cell(r, h["택배사"]).value for r in (2, 3, 4)] == ["경동택배", "CJ택배", "CJ택배"]
 print("OK")
+
+# 색상: 조립여부 뒤에 사이즈(24인치)가 와도 색상으로 잡지 않는다
+assert rules.extract_color("레드 1개 160cm 미조립박스 24인치", terms) == "레드"
+assert rules.convert_product("[삼천리자전거/하운드] 2026 시애틀MT 24 기어 21단 주니어, 레드, 1개, 160cm, 24인치",
+                             "레드 1개 160cm 미조립박스 24인치", terms)[0] == "시애틀MT24/레드"
+assert rules.extract_color("완전조립 블랙", terms) == "블랙"
+print("OK color")
