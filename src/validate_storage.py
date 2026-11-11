@@ -43,16 +43,18 @@ def validate(src: Path, out: Path, cfg: dict) -> tuple[list[tuple], int]:
         return diffs, 0
     hb = {name: i + 1 for i, name in enumerate(heads)}
 
-    ra = S.storage_rows(a, h, cfg)
+    ra = S.storage_rows(a, h, S.part_prefixes())   # 부품(헬멧·보호대 등)은 내부보관용에서 제외
+    # 수량 1 초과 주문은 수량만큼 행이 펼쳐지므로 (원본 행, 기대 행) 쌍으로 비교한다.
+    exp_rows = [(r1, e) for r1 in ra
+                for e in S.expand_by_qty(S.build_row(a, r1, h, extra_col, cfg, fcfg))]
     rb = [r for r in range(2, b.max_row + 1)
           if any(b.cell(r, c).value not in (None, "") for c in range(1, len(heads) + 1))]
-    if len(ra) != len(rb):
-        diffs.append(("행수", "", "", len(ra), len(rb)))
-        return diffs, len(ra)
+    if len(exp_rows) != len(rb):
+        diffs.append(("행수", "", "", len(exp_rows), len(rb)))
+        return diffs, len(exp_rows)
 
     check_src = cfg.get("date_check_source")
-    for r1, r2 in zip(ra, rb):
-        exp = S.build_row(a, r1, h, extra_col, cfg, fcfg)
+    for (r1, exp), r2 in zip(exp_rows, rb):
         for name in cfg["headers"]:
             got = b.cell(r2, hb[name]).value
             e = exp[name]
@@ -101,11 +103,11 @@ def validate(src: Path, out: Path, cfg: dict) -> tuple[list[tuple], int]:
     if "상품옵션" in hb:
         marker = fcfg["assembled_marker"]
         n_opt = sum(1 for r in rb if marker in str(b.cell(r, hb["상품옵션"]).value or ""))
-        n_src = sum(1 for r in ra if F.is_assembled(a.cell(r, h["선택사항"]).value, fcfg))
+        n_src = sum(1 for r, _ in exp_rows if F.is_assembled(a.cell(r, h["선택사항"]).value, fcfg))
         if n_opt != n_src:
             diffs.append(("집계 합계", "", marker, n_src, n_opt))
     diffs += check_format(b, cfg)
-    return diffs, len(ra)
+    return diffs, len(exp_rows)
 
 
 def check_format(b, cfg: dict) -> list[tuple]:

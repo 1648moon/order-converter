@@ -23,6 +23,7 @@ from openpyxl.utils import get_column_letter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naming  # noqa: E402
+import rules  # noqa: E402
 import factory as F  # noqa: E402
 from convert import KEY, active_rows  # noqa: E402
 
@@ -73,17 +74,6 @@ def order_date(ws, r: int, h: dict, sources: list[str]) -> date | None:
     return None
 
 
-def is_excluded(name, cfg: dict) -> bool:
-    """자전거 외 부품(헬멧·보호대 등)은 내부보관용에서 제외 (config/storage.yaml exclude_keywords)."""
-    text = str(name or "").replace(" ", "")
-    return any(k.replace(" ", "") in text for k in cfg.get("exclude_keywords") or [])
-
-
-def storage_rows(ws, h: dict, cfg: dict) -> list[int]:
-    """내부보관용에 넣을 행 번호 (제외 대상 상품 뺀 활성 행). 생성과 검증이 공유."""
-    return [r for r in active_rows(ws, h) if not is_excluded(ws.cell(r, h["상품명"]).value, cfg)]
-
-
 def build_row(ws, r: int, h: dict, extra_col: int, cfg: dict, fcfg: dict) -> dict:
     g = lambda name: ws.cell(r, h[name]).value  # noqa: E731
     opt = g("선택사항")
@@ -100,6 +90,34 @@ def build_row(ws, r: int, h: dict, extra_col: int, cfg: dict, fcfg: dict) -> dic
         "수화주휴대폰": g("수령자휴대전화"),
     }
     return {k: all_vals[k] for k in cfg["headers"]}
+
+
+def part_prefixes(terms: dict | None = None) -> list[str]:
+    """부품(헬멧·보호대·자물쇠 등 용품) 변환명의 앞부분. terms.yaml 에서 blank_option 이 켜진 규칙의 템플릿 앞부분('…/' 또는 '{' 앞)."""
+    terms = terms or rules.load_terms()
+    out = []
+    for rule in terms["products"]:
+        if rule.get("blank_option"):
+            out.append(re.split(r"[/{]", rule["template"], maxsplit=1)[0])
+    return [p for p in out if p]
+
+
+def is_part(name, prefixes: list[str]) -> bool:
+    n = str(name or "").replace(" ", "")
+    return any(n.startswith(p) for p in prefixes)
+
+
+def storage_rows(ws, h: dict, prefixes: list[str]) -> list[int]:
+    """내부보관용에 넣을 행: 산출물 대상 행(active_rows)에서 부품을 뺀 것. 추가상품은 남긴다."""
+    return [r for r in active_rows(ws, h) if not is_part(ws.cell(r, h["상품명"]).value, prefixes)]
+
+
+def expand_by_qty(row: dict) -> list[dict]:
+    """주문량이 1 초과면 같은 주문을 수량만큼 복제하고, 각 행의 주문량은 1로 한다."""
+    q = row.get("주문량")
+    if isinstance(q, int) and q > 1:
+        return [{**row, "주문량": 1} for _ in range(q)]
+    return [row]
 
 
 def side_layout(cfg: dict) -> dict:
@@ -213,11 +231,11 @@ def build(src: Path, dst: Path, cfg: dict) -> tuple[int, list[str]]:
     ws = load_workbook(src).active
     h, extra_col = check_columns(ws)
     rows = []
-    for r in storage_rows(ws, h, cfg):
+    for r in storage_rows(ws, h, part_prefixes()):
         row = build_row(ws, r, h, extra_col, cfg, fcfg)
         if "접수일자" in row and row["접수일자"] is None:
             raise SystemExit(f"{r}행: 접수일자를 읽을 수 없습니다 ({', '.join(cfg['date_sources'])})")
-        rows.append(row)
+        rows.extend(expand_by_qty(row))
 
     out = Workbook()
     o = out.active
