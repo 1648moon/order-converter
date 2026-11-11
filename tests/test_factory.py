@@ -1,8 +1,11 @@
 """공장파일 규칙 단위 테스트 (기대값은 사용자가 정한 규칙을 직접 적은 것).
 실행: .venv/bin/python -I tests/test_factory.py
 """
+import os
 import sys
 from pathlib import Path
+
+os.environ["FACTORY_IGNORE_LOCAL"] = "1"   # 샘플값(config/factory.yaml) 기준으로 검증: factory.local.yaml 무시
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import factory as F  # noqa: E402

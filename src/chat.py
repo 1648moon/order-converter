@@ -9,6 +9,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+import factory as F
 import rules
 import llm_fallback
 
@@ -74,10 +75,14 @@ def parse_fee_rule(text: str) -> tuple[str, int] | None:
 
 def add_fee_rule(product: str, fee: int, path: Path = FACTORY_YAML) -> str:
     """config/factory.yaml 의 shipping_rules 맨 위(조립 규칙 바로 아래)에 미조립 규칙 한 줄을 넣는다.
+    factory.local.yaml 에 shipping_rules 가 있으면(실제 운임) 그쪽이 샘플을 덮어쓰므로 거기에 넣는다.
     돌려주는 값: 사용자에게 보여 줄 한 줄 결과."""
+    local = F.local_path(path)
+    if local.exists() and re.search(r"^shipping_rules:", local.read_text(encoding="utf-8"), re.M):
+        path = local
     text = path.read_text(encoding="utf-8")
     if re.search(rf'product_contains:\s*"{re.escape(product)}"', text):
-        return f"'{product}' 운임은 이미 등록돼 있어요. 바꾸려면 config/factory.yaml 에서 직접 고쳐 주세요."
+        return f"'{product}' 운임은 이미 등록돼 있어요. 바꾸려면 config/{path.name} 에서 직접 고쳐 주세요."
     lines = text.splitlines(keepends=True)
     idx = next((i for i, ln in enumerate(lines) if ln.startswith("shipping_rules:")), None)
     if idx is None:

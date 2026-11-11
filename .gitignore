@@ -10,3 +10,6 @@ __pycache__/
 .discord_sessions.json
 state/
 .env.example
+
+# 실제 운임 등 커밋하지 않는 로컬 설정 (factory.yaml 위에 덮어쓴다)
+config/*.local.yaml
