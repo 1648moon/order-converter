@@ -14,7 +14,7 @@ tools: Bash, Read, Edit
    - 종료코드 1 = 불일치. 화면에 나온 분류·행·컬럼을 요약해 보고한다. 원인이 규칙 누락이면 규칙을, 데이터 문제이면 사용자 확인을 요청한다.
 4. 공장 전달용 파일(요청 시): `.venv/bin/python -I src/factory.py output/<이름>_변환.xlsx` → `output/<이름>_공장.xlsx`
    검증: `.venv/bin/python -I src/validate_factory.py output/<이름>_변환.xlsx output/<이름>_공장.xlsx`
-   택배운임·결제조건 등은 `config/factory.yaml`에서 관리한다. 새 운임 규칙은 `shipping_rules` 위쪽에 추가한다.
+   택배운임·결제조건 등은 `config/factory.yaml`에서 관리한다. 새 운임 규칙은 `shipping_rules` 위쪽에 추가한다. 실제 운임은 커밋하지 않는 `config/factory.local.yaml`이 있으면 그 값이 우선하며(없으면 샘플), 새 운임 규칙은 그 파일의 `shipping_rules`에 추가한다.
 5. 택배 접수용 파일(요청 시): `.venv/bin/python -I src/courier.py output/<이름>_변환.xlsx` → `output/<이름>_택배.xlsx` (종료코드 2 = 수량이 1이 아닌 주문 있음, 보고 필요)
    검증: `.venv/bin/python -I src/validate_courier.py output/<이름>_변환.xlsx output/<이름>_택배.xlsx`
    고정값·매핑은 `config/courier.yaml`에서 관리한다.

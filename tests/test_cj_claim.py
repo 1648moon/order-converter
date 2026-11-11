@@ -1,6 +1,9 @@
 """CJ대한통운 표기 / 클레임 제외 / 소품 상품명 변환 테스트. 실행: python -I tests/test_cj_claim.py"""
+import os
 import sys
 from pathlib import Path
+
+os.environ["FACTORY_IGNORE_LOCAL"] = "1"   # 샘플값(config/factory.yaml) 기준으로 검증: factory.local.yaml 무시
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import rules, convert, factory as F, llm_fallback as L  # noqa: E402
