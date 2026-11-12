@@ -89,6 +89,7 @@ def main() -> int:
     now = datetime.now()
     if a.ampm:
         now = now.replace(hour=9 if a.ampm == "오전" else 14)
+    now = naming.with_source_date(now, src)   # 파일명의 날짜는 실행일이 아니라 원본 파일의 날짜
     f = {"변환": run_dir / f"{stem}_변환.xlsx",
          "공장": run_dir / naming.factory_name(root, now),
          "택배": run_dir / naming.courier_name(now),
