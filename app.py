@@ -80,12 +80,12 @@ def convert(data: bytes, filename: str) -> dict:
 
 
 def prune_state() -> None:
-    """상태 폴더에서 오늘이 아닌 파일명 기록은 지운다 (버전 번호는 하루 단위)."""
+    """상태 폴더에서 오늘 만들어지지 않은 기록은 지운다 (파일명 날짜는 원본 기준이라 수정일로 판단)."""
     from datetime import datetime
-    today = datetime.now().strftime("%y-%m-%d")
+    today = datetime.now().date()
     if STATE_DIR.exists():
         for p in STATE_DIR.glob("*.xlsx"):
-            if not p.name.startswith(today):
+            if datetime.fromtimestamp(p.stat().st_mtime).date() != today:
                 p.unlink(missing_ok=True)
 
 

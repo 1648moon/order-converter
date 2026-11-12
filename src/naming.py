@@ -6,6 +6,7 @@
     내부보관용    YY-MM-DD 발송내역.xlsx
     중간파일      {원본이름}_변환.xlsx   (내부용, 규칙 대상 아님)
 
+날짜는 원본 파일 기준 (source_date: 주문일자 열의 가장 늦은 날짜 → 없으면 파일 수정일 → 없으면 오늘).
 오전/오후는 실행 시각 기준 (12시 이전 = 오전). V 는 output 아래(하위 폴더 포함)에 이미 있는 같은 날·같은 A 파일 중 최대값 + 1.
 """
 from __future__ import annotations
@@ -45,3 +46,43 @@ def cj_stem(stem: str, suffix: str) -> str:
     """공장용 파일명(…({A})-{V})에서 CJ용 이름: …({A})-CJ. 규칙 형식이 아니면 stem + suffix."""
     m = re.match(r"^(.*문바이크주문\(\d\))-\d+$", stem)
     return f"{m.group(1)}-CJ" if m else stem + suffix
+
+
+def source_date(src: Path) -> datetime | None:
+    """원본 엑셀의 날짜: '주문일자(yyyyMMdd)' / '주문일(약식)' 열의 가장 늦은 날짜. 없으면 파일 수정일."""
+    try:
+        import openpyxl
+        ws = openpyxl.load_workbook(src, read_only=True, data_only=True).active
+        rows = ws.iter_rows(values_only=True)
+        head = [str(c or "").strip() for c in next(rows)]
+        cols = [i for i, h in enumerate(head) if h in ("주문일자(yyyyMMdd)", "주문일(약식)")]
+        found = []
+        for r in rows:
+            for i in cols:
+                v = r[i] if i < len(r) else None
+                if isinstance(v, datetime):
+                    found.append(v)
+                    break
+                m = re.match(r"^\s*(\d{4})[-.]?(\d{2})[-.]?(\d{2})\s*$", str(v or "")) \
+                    or re.match(r"^\s*(\d{2})\.(\d{2})\.(\d{2})\s*$", str(v or ""))
+                if m:
+                    y, mo, d = (int(x) for x in m.groups())
+                    try:
+                        found.append(datetime(y + 2000 if y < 100 else y, mo, d))
+                        break
+                    except ValueError:
+                        pass
+        if found:
+            return max(found)
+    except Exception:
+        pass
+    try:
+        return datetime.fromtimestamp(Path(src).stat().st_mtime)
+    except OSError:
+        return None
+
+
+def with_source_date(now: datetime, src: Path) -> datetime:
+    """실행 시각(now)의 시·분은 유지하고 날짜만 원본 파일 날짜로 바꾼다."""
+    d = source_date(src)
+    return now.replace(year=d.year, month=d.month, day=d.day) if d else now
