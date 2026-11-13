@@ -4,6 +4,8 @@
     .venv/bin/python src/courier.py output/주문원본1_변환.xlsx
     .venv/bin/python src/courier.py output/주문원본1_변환.xlsx -o output/택배.xlsx
 
+택배용에는 부품(용품)을 넣지 않고 자전거만 넣는다.
+
 종료코드: 0 정상 / 2 경고(수량을 읽을 수 없는 주문 또는 운임표에 없는 상품 있음)
 
 수량이 1 초과인 주문은 같은 행을 수량만큼 반복해 넣는다(택배 수량 칸은 항상 1).
@@ -23,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naming  # noqa: E402
 import factory as F  # noqa: E402
 import xlsxkit as xk  # noqa: E402
+import rules  # noqa: E402
+import storage as S  # noqa: E402
 from convert import KEY, active_rows  # noqa: E402
 
 DEFAULT_CFG = Path(__file__).resolve().parent.parent / "config" / "courier.yaml"
@@ -91,6 +95,12 @@ def repeat_by_qty(ws, h: dict, rows: list[int]) -> list[int]:
     return out
 
 
+def courier_rows(ws, h: dict) -> list[int]:
+    """택배용에 넣을 행: 산출물 대상 행(active_rows)에서 부품(용품)을 뺀 자전거만."""
+    prefixes = S.part_prefixes()
+    return [r for r in active_rows(ws, h) if not S.is_part(ws.cell(r, h["상품명"]).value, prefixes)]
+
+
 def need_columns(cfg: dict) -> list[str]:
     return ["수령자", "수량", "상품명", "선택사항", "택배사", *cfg["copy"].values(), *cfg["phone_sources"]]
 
@@ -102,7 +112,7 @@ def build(src: Path, dst: Path, cfg: dict) -> tuple[int, int, list[str]]:
     if miss:
         raise SystemExit(f"중간파일에 필수 컬럼 없음: {', '.join(miss)}")
     fcfg = factory_cfg()
-    base_rows = active_rows(ws, h)
+    base_rows = courier_rows(ws, h)
     src_rows = repeat_by_qty(ws, h, base_rows)
     rows = [build_row(ws, r, h, extra_col, cfg) for r in src_rows]
     matched = [fee_for(ws, r, h)[1] for r in src_rows]

@@ -25,7 +25,7 @@ from openpyxl import load_workbook
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rules  # noqa: E402
-from convert import KEY, data_rows, header_map  # noqa: E402
+from convert import KEY, data_rows, header_map, is_claim, qty_of  # noqa: E402
 
 
 def norm(v):
@@ -61,6 +61,7 @@ def validate(src: Path, out: Path, terms: dict) -> list[tuple]:
 
     # 2) 행
     ra, rb = data_rows(a, ha[KEY]), data_rows(b, hb[KEY])
+    ra = [r for r in ra for _ in range(qty_of(a, ha, r) if not is_claim(a, ha, r) else 1)]   # 수량만큼 복사된 원본 행
     if len(ra) != len(rb):
         diffs.append(("행수", "", KEY, len(ra), len(rb)))
     ka = [a.cell(r, ha[KEY]).value for r in ra]
@@ -76,6 +77,8 @@ def validate(src: Path, out: Path, terms: dict) -> list[tuple]:
             v1, v2 = a.cell(r1, c1).value, b.cell(r2, hb[name]).value
             if name in transformed:
                 continue
+            if name == "수량" and not is_claim(a, ha, r1):    # 수량 2+ 주문은 행 복사 후 수량 1
+                v1 = 1 if qty_of(a, ha, r1) > 1 else v1
             if name == "택배사" and "단가" in ha:     # 부품(단가 이하)은 CJ 로 바뀌는 것이 기대값
                 v1 = rules.expected_carrier(v1, a.cell(r1, ha["단가"]).value, terms)
             if norm(v1) != norm(v2):
