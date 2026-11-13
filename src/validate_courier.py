@@ -41,7 +41,7 @@ def validate(src: Path, out: Path, cfg: dict) -> tuple[list[tuple], int]:
         return diffs, 0
     hb = {name: i + 1 for i, name in enumerate(heads)}
 
-    ra = C.repeat_by_qty(a, h, active_rows(a, h))   # 수량만큼 반복된 원본 행
+    ra = C.repeat_by_qty(a, h, C.courier_rows(a, h))   # 수량만큼 반복된 원본 행
     rb = [r for r in range(2, b.max_row + 1)
           if any(b.cell(r, c).value not in (None, "") for c in range(1, b.max_column + 1))]
     if len(ra) != len(rb):

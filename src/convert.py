@@ -45,6 +45,37 @@ def active_rows(ws, h: dict) -> list[int]:
     return [r for r in data_rows(ws, h[KEY]) if not is_claim(ws, h, r)]
 
 
+def qty_of(ws, h: dict, r: int) -> int:
+    """행의 수량(정수 2 이상이면 그 값, 아니면 1)."""
+    c = h.get("수량")
+    v = ws.cell(r, c).value if c else None
+    return int(v) if isinstance(v, (int, float)) and float(v).is_integer() and v > 1 else 1
+
+
+def expand_rows_by_qty(ws, h: dict) -> int:
+    """수량이 1 초과인 주문(클레임 제외)은 같은 행을 수량만큼 복사해 아래에 붙이고, 각 행의 수량은 1로 한다.
+    복사한 행 수를 돌려준다."""
+    added = 0
+    last = max(data_rows(ws, h[KEY]), default=1)
+    for r in range(last, 1, -1):
+        if ws.cell(r, h[KEY]).value in (None, "") or is_claim(ws, h, r):
+            continue
+        q = qty_of(ws, h, r)
+        if q <= 1:
+            continue
+        ws.insert_rows(r + 1, q - 1)
+        for k in range(1, q):
+            for c in range(1, ws.max_column + 1):
+                src, dst = ws.cell(r, c), ws.cell(r + k, c)
+                dst.value, dst._style = src.value, copy.copy(src._style)
+            if ws.row_dimensions[r].height:
+                ws.row_dimensions[r + k].height = ws.row_dimensions[r].height
+        for k in range(q):
+            ws.cell(r + k, h["수량"]).value = 1
+        added += q - 1
+    return added
+
+
 def apply_llm_fallback(ws, h, rows, terms: dict, map_path: Path) -> int:
     """규칙·매핑표에 없는 상품명을 LLM 에 제안받아 매핑표에 status: llm 으로 저장. 새로 저장한 건수 반환."""
     import llm_fallback  # 지연 import: --llm 을 쓸 때만 anthropic 필요
@@ -71,6 +102,9 @@ def convert(src: Path, dst: Path, terms: dict, use_llm: bool = False,
         if need not in h:
             raise SystemExit(f"필수 컬럼 없음: {need}")
 
+    n_added = expand_rows_by_qty(ws, h) if "수량" in h else 0
+    if n_added:
+        print(f"수량 2개 이상 주문을 수량만큼 행으로 복사했습니다 (추가 {n_added}행, 각 행 수량 1).")
     rows = data_rows(ws, h[KEY])
     warnings: list[tuple[int, str, str]] = []
     n_claim = sum(1 for r in rows if is_claim(ws, h, r))

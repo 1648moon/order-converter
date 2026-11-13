@@ -46,6 +46,19 @@ def _s(v) -> str:
     return "" if v is None else str(v)
 
 
+def _second_color(text: str, end: int, terms: dict) -> str:
+    """'색상:블랙/레드' 처럼 색상 뒤에 '/다른색' 이 붙으면 '레드' 를 돌려줘 '블랙레드' 로 합친다.
+    '/2개', '/완전조립' 처럼 색상 목록(terms.yaml color_words)에 없는 값은 합치지 않는다."""
+    words = terms.get("color_words") or []
+    # 색상 패턴이 구분자('/')까지 소비했을 수 있어 직전 문자도 확인한다
+    for pos in (end - 1, end):
+        if 0 <= pos < len(text) and text[pos] == "/":
+            m = re.match(r"\s*([가-힣]+)\s*(?:[,/(]|-?\d|$)", text[pos + 1:])
+            if m and m.group(1) in words:
+                return m.group(1)
+    return ""
+
+
 def extract_color(option, terms: dict) -> str | None:
     text = _s(option)
     for pat in terms["color_patterns"]:
@@ -54,7 +67,7 @@ def extract_color(option, terms: dict) -> str | None:
             color = re.sub(r"\(.*?\)", "", m.group(1))          # 라이트핑크(무광) -> 라이트핑크
             color = re.sub(r"[-\s]*\d+\s*개$", "", color)       # 블루-1개 -> 블루
             if color.strip():
-                return color.strip()
+                return color.strip() + _second_color(text, m.end(), terms)
             # 비었으면(예: '미조립 1개' 에서 '1개' 만 잡힘) 다음 패턴을 계속 시도한다
     return None
 
