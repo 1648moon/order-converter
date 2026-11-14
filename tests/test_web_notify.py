@@ -41,6 +41,16 @@ with tempfile.TemporaryDirectory() as t:
     assert bot.reply_for("상태").startswith("2026-11-10_v3")
     assert len(bot.reply_for("목록").splitlines()) == 3
     assert bot.reply_for("아무말") is None
+    assert "지원하지 않는" in bot.reply_for("웹")                      # 열기 동작이 없으면 안내만
+
+    opened = []
+    web_bot = discord_notify.Notifier(out, None, None, None, open_web=lambda: opened.append(1) or "열었습니다")
+    assert [web_bot.reply_for(w) for w in ("웹", " web ", "업로드")] == ["열었습니다"] * 3 and len(opened) == 3
+    assert web_bot.reply_for("웹 열어줘") is None                      # 정확히 일치할 때만 (일반 대화에 오작동 방지)
+
+    def boom():
+        raise RuntimeError("no browser")
+    assert "열지 못했습니다" in discord_notify.Notifier(out, None, None, None, open_web=boom).reply_for("웹")
     assert not bot.enabled
 
     sent = []
