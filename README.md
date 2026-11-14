@@ -46,8 +46,79 @@
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -I src/run_all.py input/<주문원본>.xlsx      # 전체 변환 + 검증
-.venv/bin/python src/serve.py                                  # 웹 업로드 화면
+.venv/bin/python src/serve.py                                  # 웹 업로드 화면 (http://127.0.0.1:8765)
 ```
+
+## 깃허브에서 받아 내 컴퓨터에 설치하기 (기존 로컬 파일이 있는 사용자)
+
+이미 이 프로그램을 쓰고 있어서 깃허브에 없는 파일(실제 운임, `.env`, 지난 작업 기록)을 갖고 있는 경우의 순서입니다. 코드는 깃허브에서, 비공개 파일은 기존 폴더에서 가져옵니다.
+
+### 1) 깃허브에 없는 파일 (기존 폴더에서 옮길 것)
+
+| 파일/폴더 | 내용 | 없으면 |
+|---|---|---|
+| `.env` | 브랜드명(`BRAND_NAME`), 디스코드 설정, 입출력 폴더 경로 | 파일명이 `브랜드주문`으로 나오고 디스코드 알림이 꺼집니다 |
+| `config/factory.local.yaml` | 실제 택배운임 (샘플 운임 위에 덮어씀) | 운임이 샘플값으로 나옵니다 (금액이 틀림) |
+| `state/` | 이미 만든 파일명 기록 | 같은 날 버전 번호(`-1`, `-2`…)가 1부터 다시 시작해 이미 보낸 파일과 이름이 겹칠 수 있습니다 |
+| `input/`, `output/` | 주문 원본과 이전 결과 | 새로 올리면 되므로 필수는 아닙니다 (개인정보 파일, 깃허브 업로드 금지) |
+
+이 파일들은 저장소에 없으므로 **따로 백업**하세요. 폴더를 지우기 전에 반드시 위 네 가지를 복사해 두세요.
+
+### 2) 설치 순서
+
+```bash
+# ① 코드 받기
+git clone <저장소 주소> jimini && cd jimini
+
+# ② 파이썬 환경 만들고 패키지 설치 (Python 3.10 이상 권장)
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+
+# ③ 기존 폴더에서 비공개 파일 복사 (경로는 본인 것으로)
+OLD=~/기존/jimini폴더
+cp "$OLD/.env" .
+cp "$OLD/config/factory.local.yaml" config/
+cp -R "$OLD/state" .
+```
+
+### 3) `.env` 내용
+
+`.env`는 `KEY=값` 한 줄씩 적는 텍스트 파일입니다. 새로 만든다면 아래 항목을 채우세요(모두 선택, 필요한 것만).
+
+```
+BRAND_NAME=내브랜드          # 파일명에 들어가는 이름 (없으면 "브랜드")
+DISCORD_TOKEN=...            # 디스코드 알림 봇 (세 개가 모두 있어야 켜집니다)
+DISCORD_CHANNEL_ID=...
+DISCORD_OWNER_ID=...
+INPUT_ROOT=/절대/경로/input    # 업로드 파일 저장 폴더 (기본: 저장소 안 input/)
+OUTPUT_ROOT=/절대/경로/output  # 결과 폴더 (기본: 저장소 안 output/)
+# WEB_PORT=8765              # 웹 화면 포트 (기본 8765)
+# ANTHROPIC_API_KEY=...      # --llm 옵션(AI 상품명 제안)을 쓸 때만
+```
+
+옛 `INPUT_ROOT`/`OUTPUT_ROOT`가 이전 PC의 경로(`/Users/…`)라면 새 PC 경로로 **꼭 고치세요.** 그대로 두면 없는 폴더를 가리킵니다.
+
+### 4) 제대로 설정됐는지 확인
+
+```bash
+# 테스트 (하나라도 FAIL이면 코드/환경 문제)
+for f in tests/test_*.py; do PYTHONPATH=src .venv/bin/python -I "$f" >/dev/null 2>&1 && echo "pass $f" || echo "FAIL $f"; done
+
+# 주문 원본 1개로 실제 변환 (종료코드 0, 8단계 모두 [정상]이면 통과)
+.venv/bin/python -I src/run_all.py input/<주문원본>.xlsx; echo "exit=$?"
+```
+
+- 생성된 파일명에 내 브랜드명이 보이면 `.env`가 적용된 것이고, 운임이 실제 값이면 `factory.local.yaml`이 적용된 것입니다.
+- 샘플 운임으로만 확인하고 싶으면 `FACTORY_IGNORE_LOCAL=1`을 앞에 붙여 실행하세요.
+
+### 5) 코드 업데이트 받기
+
+```bash
+git pull
+.venv/bin/pip install -r requirements.txt    # 패키지가 바뀌었을 수 있음
+```
+
+비공개 파일은 `.gitignore` 대상이라 `git pull`로 덮어써지거나 지워지지 않습니다. 단, `config/factory.yaml`의 샘플 운임 항목이 바뀌어도 `factory.local.yaml`이 그 위에 덮어쓰므로, 새로 생긴 규칙 항목이 있으면 `factory.local.yaml`에도 반영해야 하는지 확인하세요(리스트 항목은 통째로 교체됩니다).
 
 ## 깃허브에 올린 코드만으로 되는지 확인하기 (클린 클론 검증)
 
@@ -68,6 +139,6 @@ mkdir -p input && cp ~/내주문원본.xlsx input/
 - 결과는 `output/YYYY-MM-DD_vN/`(최신본은 `output/latest/`)에 생기고, 8단계가 모두 `[정상]`이면 통과입니다.
 - **깃허브에 없는 것(클론에 따로 옮겨야 같은 결과):** 주문 원본(`input/`, 개인정보라 커밋 금지), `.env`(브랜드명·디스코드 설정), `config/factory.local.yaml`(실제 운임).
   - 클론에서 그냥 돌리면 파일명은 `브랜드주문`, 택배운임은 샘플값으로 나옵니다. 변환 자체는 되지만 운임 금액은 실제와 다릅니다. 실제 운임까지 같은지 보려면 `factory.local.yaml`을 복사해 넣고 다시 돌려 비교하세요.
-- 다른 PC나 서버에 설치할 때도 같은 순서입니다(위 3가지는 따로 복사).
+- 다른 PC나 서버에 설치할 때는 바로 위 "깃허브에서 받아 내 컴퓨터에 설치하기" 순서를 따르세요.
 
 디스코드 알림은 `.env` 파일을 만들어 `DISCORD_TOKEN`, `DISCORD_CHANNEL_ID`, `DISCORD_OWNER_ID`를 채우면 켜집니다(파일명용 `BRAND_NAME`도 여기에). 종료코드: 0 정상 / 2 경고(파일은 생성됨) / 1 오류·검증 실패.
