@@ -9,6 +9,7 @@ OUTPUT_ROOT / INPUT_ROOT (절대경로, 선택)를 적으면 어느 폴더(워�
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import webbrowser
@@ -28,7 +29,10 @@ def load_env(path: Path) -> None:
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+            v = v.strip()
+            if v[:1] not in ("'", '"'):
+                v = re.split(r"\s+#", " " + v, maxsplit=1)[0].strip()   # 값 뒤 같은 줄 주석(# …) 제거
+            os.environ.setdefault(k.strip(), v.strip('"').strip("'"))
 
 
 def main_checkout_root() -> Path:
