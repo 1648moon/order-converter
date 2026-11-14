@@ -32,7 +32,7 @@
 - 규칙에 없는 상품명을 AI가 제안 (`--llm`, `ANTHROPIC_API_KEY` 필요). 제안은 사람이 확인하기 전까지 "미확인"으로 표시
 - 내 맥에서 쓰는 웹 업로드 화면 (`src/serve.py` → http://127.0.0.1:8765)과 디스코드 알림 전용 봇
 - Streamlit 웹앱(`app.py`, 비밀번호 보호)과 Docker 구성
-- 단위 테스트 통과 (`tests/`, `PYTHONPATH=src python -m unittest discover -s tests`)
+- 테스트 통과 (`tests/test_*.py` 13개, assert 방식 스크립트라 `unittest discover`로는 안 잡힙니다. 아래 '깃허브 코드로 확인하기'의 반복문으로 실행)
 
 ### 아직 안 되는 것 / 남은 일
 - **디스코드에서 말로 요청하기:** 말투 해석·쉬운 말 보고 로직(`src/chat.py`)은 만들어져 있지만 아직 봇/웹에 연결되지 않았습니다. 현재 봇은 알림과 `상태`/`목록` 명령만 처리합니다.
@@ -48,5 +48,26 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -I src/run_all.py input/<주문원본>.xlsx      # 전체 변환 + 검증
 .venv/bin/python src/serve.py                                  # 웹 업로드 화면
 ```
+
+## 깃허브에 올린 코드만으로 되는지 확인하기 (클린 클론 검증)
+
+내 컴퓨터에서는 저장소에 없는 파일(`.env`, `config/factory.local.yaml`, `input/`) 덕분에 돌아가는 것일 수 있습니다. 아래처럼 깃허브에서 새로 받은 폴더에서 돌려 보면, 올라간 코드만으로 되는지 확인됩니다.
+
+```bash
+git clone <저장소 주소> /tmp/jimini-check && cd /tmp/jimini-check
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+# 1) 테스트: 파일마다 직접 실행 (하나라도 FAIL이면 문제)
+for f in tests/test_*.py; do PYTHONPATH=src .venv/bin/python -I "$f" >/dev/null 2>&1 && echo "pass $f" || echo "FAIL $f"; done
+
+# 2) 실제 변환: 주문 원본을 input/ 에 복사해서 실행 (종료코드 0 이면 정상)
+mkdir -p input && cp ~/내주문원본.xlsx input/
+.venv/bin/python -I src/run_all.py input/내주문원본.xlsx; echo "exit=$?"
+```
+
+- 결과는 `output/YYYY-MM-DD_vN/`(최신본은 `output/latest/`)에 생기고, 8단계가 모두 `[정상]`이면 통과입니다.
+- **깃허브에 없는 것(클론에 따로 옮겨야 같은 결과):** 주문 원본(`input/`, 개인정보라 커밋 금지), `.env`(브랜드명·디스코드 설정), `config/factory.local.yaml`(실제 운임).
+  - 클론에서 그냥 돌리면 파일명은 `브랜드주문`, 택배운임은 샘플값으로 나옵니다. 변환 자체는 되지만 운임 금액은 실제와 다릅니다. 실제 운임까지 같은지 보려면 `factory.local.yaml`을 복사해 넣고 다시 돌려 비교하세요.
+- 다른 PC나 서버에 설치할 때도 같은 순서입니다(위 3가지는 따로 복사).
 
 디스코드 알림은 `.env` 파일을 만들어 `DISCORD_TOKEN`, `DISCORD_CHANNEL_ID`, `DISCORD_OWNER_ID`를 채우면 켜집니다(파일명용 `BRAND_NAME`도 여기에). 종료코드: 0 정상 / 2 경고(파일은 생성됨) / 1 오류·검증 실패.
