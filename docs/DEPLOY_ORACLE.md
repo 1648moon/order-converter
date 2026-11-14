@@ -12,18 +12,30 @@ APP_PASSWORD=아무거나 streamlit run app.py     # http://localhost:8501
 ## 1. Oracle Cloud 가입 · 서버 생성
 1. https://www.oracle.com/kr/cloud/free/ 에서 가입 (해외결제 카드 인증 필요, 무료 범위 안에서는 청구 없음).
    **Home Region은 한국(춘천 또는 서울)** 으로 선택. 가입 후에는 변경 불가.
+   가입 화면에 한국이 없으면 일본(오사카·도쿄)이 가깝습니다. 개인정보가 해외 서버를 거치게 되므로 내부 정책과 맞는지 확인하세요.
+   주소 칸이 영문만 받으면 `Dongdaemun-gu`처럼 영문으로, City 칸에는 구가 아니라 `Seoul`을 적습니다.
 2. 콘솔 → Compute → Instances → Create instance
    - Image: **Ubuntu 24.04** (Canonical Ubuntu)
    - Shape: **VM.Standard.A1.Flex** (Always Free 표시), OCPU 1 / 메모리 6GB 정도면 충분
-     (`Out of capacity` 오류가 나면 시간을 두고 재시도하거나 OCPU/메모리를 줄이거나 Availability Domain 변경)
-   - Networking: 기본 VCN 생성, Public IP 할당 (SSH 접속용으로만 사용)
-   - SSH keys: 키 쌍을 생성해 **private key 다운로드·보관**
+     (`Out of capacity` 오류가 나면 시간을 두고 재시도하거나 OCPU/메모리를 줄이거나 Availability Domain 변경.
+     계정을 Pay-As-You-Go 로 올리면 용량이 풀리는 경우가 많고, Always Free 한도 안에서는 청구되지 않습니다.)
+   - 계속 안 되면 AMD 무료 쉐이프 **VM.Standard.E2.1.Micro**(메모리 1GB)로 만들 수 있습니다.
+     이 경우 **2단계에서 스왑 2GB 를 반드시 먼저 만드세요**(없으면 빌드·실행 중 메모리 부족). 실제로 이 구성으로 배포·운영 검증했습니다.
+   - Networking: 새 VCN + **새 퍼블릭 서브넷**, Public IP 할당 (SSH 접속용으로만 사용).
+     생성 화면에서 Public IPv4 토글이 안 켜지면 그대로 만든 뒤 Instance → Attached VNICs → Primary VNIC →
+     IPv4 Addresses → Edit → **Ephemeral public IP** 로 붙입니다.
+   - SSH keys: 키 쌍을 생성해 **private key 다운로드·보관** (생성 때만 받을 수 있음. 맥이면 `~/.ssh/`에 두고 `chmod 600`)
+   - Shielded instance, 블록 볼륨, 백업은 필요 없습니다. 부트 볼륨은 기본 크기로 충분합니다.
 3. 보안 목록(Security List)에서 **인바운드는 SSH(22)만** 허용. 8501 등 다른 포트는 열지 않습니다.
    (더 안전하게 하려면 22도 내 공인 IP로 제한, 아래 5단계 후에는 22도 닫아도 됨)
 
 ## 2. 서버 접속 · 기본 설정
 ```bash
 ssh -i <private key 파일> ubuntu@<서버 공인 IP>
+
+# (E2.1.Micro 1GB 일 때 필수) 스왑 2GB
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab
 
 sudo apt update && sudo apt -y upgrade
 sudo apt -y install unattended-upgrades          # 보안 패치 자동 적용
@@ -79,7 +91,10 @@ tailscale serve status                  # https://<서버이름>.<tailnet>.ts.ne
 - 직원 PC·폰에도 Tailscale 앱을 설치하고 같은 계정(또는 초대받은 계정)으로 로그인하면
   위 주소로 접속됩니다. 개인용 무료 플랜은 사용자 3명까지입니다.
 - `tailscale funnel` 은 **인터넷 공개**이므로 사용하지 마세요.
-- 5단계가 끝나면 Oracle 보안 목록에서 22번 포트도 제거하고 `tailscale ssh`(또는 Tailscale 주소로 SSH)로만 관리할 수 있습니다.
+- `tailscale serve` 가 "Serve is not enabled on your tailnet" 으로 멈추면 출력된 링크에서 계정에 Serve(HTTPS)를 한 번 켜고 다시 실행합니다.
+- Tailscale 관리 화면(Machines)에서 이 서버의 **Disable key expiry** 를 눌러 두세요. 안 하면 약 180일 뒤 서버가 tailnet 에서 끊깁니다.
+- 2단계 인증은 Tailscale 이 아니라 로그인에 쓴 계정(Google·GitHub 등)에서 켭니다.
+- Tailscale 주소(`100.x.x.x`)로 SSH 가 되는지 확인한 뒤 Oracle 보안 목록에서 22번 포트를 제거하면, 이후 서버는 Tailscale 로만 관리됩니다.
 
 ## 6. 운영
 | 작업 | 명령 |
