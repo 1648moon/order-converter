@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -58,11 +59,18 @@ def main() -> None:
     input_dir = env_path("INPUT_ROOT", ROOT / "input")
     output_root = env_path("OUTPUT_ROOT", ROOT / "output")
     print(f"결과 저장 위치: {output_root}")
-    notifier = discord_notify.Notifier.from_env(output_root)
+    port = int(os.environ.get("WEB_PORT", "8765"))
+    url = f"http://127.0.0.1:{port}"
+
+    def open_web() -> str:
+        """디스코드 '웹' 명령: 이 맥의 기본 브라우저에서 업로드 페이지를 연다."""
+        webbrowser.open(url)
+        return f"웹 페이지를 열었습니다. 맥 화면에서 파일을 올려 주세요 ({url})"
+
+    notifier = discord_notify.Notifier.from_env(output_root, open_web=open_web)
     notifier.start()
     app = webapp.create_app(ROOT, notify=notifier.notify, input_dir=input_dir, output_root=output_root)
-    port = int(os.environ.get("WEB_PORT", "8765"))
-    print(f"웹 페이지: http://127.0.0.1:{port}  (이 컴퓨터에서만 접속 가능)")
+    print(f"웹 페이지: {url}  (이 컴퓨터에서만 접속 가능)")
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)
 
 

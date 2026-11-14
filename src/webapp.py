@@ -31,6 +31,7 @@ PAGE = """<!doctype html><html lang="ko"><meta charset="utf-8">
  h1{font-size:1.3rem} .box{border:2px dashed #999;border-radius:8px;padding:1.5rem;text-align:center}
  button{padding:.6rem 1.2rem;font-size:1rem;margin-top:.8rem;cursor:pointer}
  .ok{color:#0a7d2c}.warn{color:#b26a00}.bad{color:#c0392b}
+ .btn{display:inline-block;padding:.6rem 1.2rem;background:#1a56db;color:#fff;border-radius:6px;text-decoration:none;font-weight:600}
  li{margin:.3rem 0} small{color:#666}
 </style>
 <h1>주문 엑셀 변환</h1>
@@ -46,7 +47,7 @@ PAGE = """<!doctype html><html lang="ko"><meta charset="utf-8">
   <small>자세한 내용은 폴더의 실행요약.txt 를 확인하세요: output/{{ result.name }}/</small></p>{% endif %}
  {% if result.warn_stages %}<p class="warn">경고 단계: {{ result.warn_stages|join(', ') }}<br>
   <small>파일은 생성됐지만 확인이 필요합니다. output/{{ result.name }}/실행요약.txt</small></p>{% endif %}
- {% if result.files|length > 1 %}<p><a href="/zip/{{ result.name }}"><button type="button">⬇ 전체 한 번에 받기 (ZIP, {{ result.files|length }}개)</button></a></p>{% endif %}
+ {% if result.files %}<p><a class="btn" href="/zip/{{ result.name }}">⬇ 전체 파일 한번에 다운로드 (ZIP, {{ result.files|length }}개)</a></p>{% endif %}
  <ul>{% for f in result.files %}
   <li><a href="/files/{{ result.name }}/{{ f }}">{{ f }}</a></li>{% endfor %}</ul>
 {% endif %}
@@ -123,15 +124,15 @@ def create_app(root: Path = ROOT, notify: Callable[[str], None] | None = None,
         return send_from_directory(output_root / run, name, as_attachment=True)
 
     @app.get("/zip/<run>")
-    def download_zip(run):
+    def download_all(run):
         run_dir = output_root / run
         if not runinfo.RUN_DIR_RE.match(run) or not run_dir.is_dir():
             abort(404)
-        files = sorted(run_dir.glob("*.xlsx"))
+        files = sorted(p for p in run_dir.iterdir() if p.is_file() and p.suffix == ".xlsx")
         if not files:
             abort(404)
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
             for p in files:
                 z.write(p, p.name)
         buf.seek(0)
