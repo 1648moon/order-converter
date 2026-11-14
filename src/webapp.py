@@ -5,15 +5,17 @@
 """
 from __future__ import annotations
 
+import io
 import re
 import subprocess
 import sys
 import threading
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from flask import Flask, abort, render_template_string, request, send_from_directory
+from flask import Flask, abort, render_template_string, request, send_file, send_from_directory
 
 import runinfo
 
@@ -44,6 +46,7 @@ PAGE = """<!doctype html><html lang="ko"><meta charset="utf-8">
   <small>자세한 내용은 폴더의 실행요약.txt 를 확인하세요: output/{{ result.name }}/</small></p>{% endif %}
  {% if result.warn_stages %}<p class="warn">경고 단계: {{ result.warn_stages|join(', ') }}<br>
   <small>파일은 생성됐지만 확인이 필요합니다. output/{{ result.name }}/실행요약.txt</small></p>{% endif %}
+ {% if result.files|length > 1 %}<p><a href="/zip/{{ result.name }}"><button type="button">⬇ 전체 한 번에 받기 (ZIP, {{ result.files|length }}개)</button></a></p>{% endif %}
  <ul>{% for f in result.files %}
   <li><a href="/files/{{ result.name }}/{{ f }}">{{ f }}</a></li>{% endfor %}</ul>
 {% endif %}
@@ -118,5 +121,21 @@ def create_app(root: Path = ROOT, notify: Callable[[str], None] | None = None,
         if not runinfo.RUN_DIR_RE.match(run) or not name.endswith(".xlsx"):
             abort(404)
         return send_from_directory(output_root / run, name, as_attachment=True)
+
+    @app.get("/zip/<run>")
+    def download_zip(run):
+        run_dir = output_root / run
+        if not runinfo.RUN_DIR_RE.match(run) or not run_dir.is_dir():
+            abort(404)
+        files = sorted(run_dir.glob("*.xlsx"))
+        if not files:
+            abort(404)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+            for p in files:
+                z.write(p, p.name)
+        buf.seek(0)
+        return send_file(buf, mimetype="application/zip", as_attachment=True,
+                         download_name=f"{run}.zip")
 
     return app

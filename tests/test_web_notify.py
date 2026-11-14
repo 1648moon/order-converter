@@ -62,4 +62,14 @@ with tempfile.TemporaryDirectory() as t:
     assert app.get("/files/..%2F/x.xlsx", follow_redirects=True).status_code == 404
     assert app.get("/files/2026-11-10_v4/실행요약.txt").status_code == 404
     assert app.get("/", headers={"Host": "evil.example.com"}).status_code == 403
+
+    # ZIP 한 번에 받기
+    import zipfile
+    make_run(root / "output", "2026-11-10_v9", "정상", [("정상", "변환")], ["a.xlsx", "b.xlsx"])
+    z = app.get("/zip/2026-11-10_v9")
+    assert z.status_code == 200 and z.mimetype == "application/zip"
+    assert sorted(zipfile.ZipFile(io.BytesIO(z.data)).namelist()) == ["a.xlsx", "b.xlsx"]
+    assert "/zip/2026-11-10_v9" in app.get("/run/2026-11-10_v9").get_data(as_text=True)
+    assert app.get("/zip/2099-01-01_v1").status_code == 404
+    assert app.get("/zip/..%2F").status_code == 404
 print("OK")

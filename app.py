@@ -14,11 +14,13 @@
 from __future__ import annotations
 
 import hmac
+import io
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 import streamlit as st
@@ -82,6 +84,15 @@ def convert(data: bytes, filename: str) -> dict:
                 "summary": summary, "files": files}
 
 
+def zip_files(files: dict) -> bytes:
+    """{파일명: 바이트} 를 ZIP 하나로 묶는다 (이미 압축된 xlsx 라 저장만 한다)."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+        for name, blob in files.items():
+            z.writestr(name, blob)
+    return buf.getvalue()
+
+
 def prune_state() -> None:
     """상태 폴더에서 오늘 만들어지지 않은 기록은 지운다 (파일명 날짜는 원본 기준이라 수정일로 판단)."""
     from datetime import datetime
@@ -116,6 +127,10 @@ if check_password():
             st.warning("파일은 만들었지만 경고가 있습니다. 아래 요약을 확인하세요.")
         else:
             st.error("실패했습니다. 파일은 제공하지 않습니다. 아래 요약을 확인하세요.")
+        if len(res["files"]) > 1:
+            st.download_button(f"⬇ 전체 한 번에 받기 (ZIP, {len(res['files'])}개)",
+                               zip_files(res["files"]), file_name="변환결과.zip",
+                               mime="application/zip", type="primary", key="zip_all")
         for name, blob in res["files"].items():
             st.download_button(f"⬇ {name}", blob, file_name=name,
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
