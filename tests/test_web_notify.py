@@ -43,6 +43,12 @@ with tempfile.TemporaryDirectory() as t:
     assert bot.reply_for("아무말") is None
     assert "지원하지 않는" in bot.reply_for("웹")                      # 열기 동작이 없으면 안내만
 
+    import os, serve                                                     # .env 의 같은 줄 주석이 값으로 들어가지 않는다
+    envf = root / "t.env"
+    envf.write_text("TENV_A=123   # 설명\nTENV_B=\"x # 유지\"\nTENV_C=   # 비어있음\nTENV_D=abc\n", encoding="utf-8")
+    serve.load_env(envf)
+    assert (os.environ["TENV_A"], os.environ["TENV_B"], os.environ["TENV_C"], os.environ["TENV_D"]) == ("123", "x # 유지", "", "abc")
+
     opened = []
     web_bot = discord_notify.Notifier(out, None, None, None, open_web=lambda: opened.append(1) or "열었습니다")
     assert [web_bot.reply_for(w) for w in ("웹", " web ", "업로드")] == ["열었습니다"] * 3 and len(opened) == 3

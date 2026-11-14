@@ -58,8 +58,12 @@ class Notifier:
     # ---- 봇 실행 ----
     def start(self) -> None:
         if not self.enabled:
-            print("[디스코드] 토큰/채널 미설정 - 알림은 콘솔에만 출력합니다.")
+            missing = [n for n, v in (("DISCORD_TOKEN", self.token), ("DISCORD_CHANNEL_ID", self.channel_id)) if not v]
+            print(f"[디스코드] {', '.join(missing)} 가 비어 있거나 올바르지 않습니다 - 알림은 콘솔에만 출력합니다. "
+                  "(ID 는 17~20자리 숫자, 값 앞에 설명 문구를 두지 마세요)")
             return
+        if not self.owner_id:
+            print("[디스코드] DISCORD_OWNER_ID 가 비어 있어 '상태'/'웹' 같은 명령은 어떤 메시지에도 반응하지 않습니다 (알림만 전송).")
         threading.Thread(target=self._run, daemon=True, name="discord-bot").start()
         if not self._ready.wait(timeout=20):
             print("[디스코드] 봇 연결이 지연되고 있습니다. 토큰/인텐트 설정을 확인하세요.")
