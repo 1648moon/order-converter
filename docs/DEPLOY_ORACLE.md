@@ -48,10 +48,21 @@ rsync -av --exclude '.git' --exclude '.venv' --exclude 'input' --exclude 'output
   --exclude 'reports' --exclude '.claude' ./ ubuntu@<서버 IP>:~/order-converter/
 ```
 
-비밀번호 설정 후 실행:
+실제 운임 파일과 브랜드명(비공개, git 에 없음)을 서버에 둡니다. 이미지에는 포함하지 않고 읽기 전용으로 마운트합니다:
+```bash
+# 내 맥에서
+ssh <서버> 'umask 077; mkdir -p ~/secrets'
+scp config/factory.local.yaml <서버>:~/secrets/factory.local.yaml
+```
+비밀번호·경로 설정 후 실행:
 ```bash
 cd ~/order-converter
-echo "APP_PASSWORD=긴-비밀번호-입력" > .env && chmod 600 .env
+cat > .env <<'EOF'
+APP_PASSWORD=긴-비밀번호-입력
+BRAND_NAME=브랜드명
+FACTORY_LOCAL_YAML=/home/ubuntu/secrets/factory.local.yaml
+EOF
+chmod 600 .env ~/secrets/factory.local.yaml
 docker compose up -d --build
 docker compose ps          # app 이 running 인지 확인
 curl -s localhost:8501/_stcore/health   # ok
