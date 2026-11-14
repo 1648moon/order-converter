@@ -4,8 +4,11 @@ services:
     restart: unless-stopped
     environment:
       APP_PASSWORD: ${APP_PASSWORD:?.env 파일에 APP_PASSWORD 를 설정하세요}
+      BRAND_NAME: ${BRAND_NAME:-}   # 파일명에 쓰는 브랜드명 (.env 에서 읽음, 비우면 '브랜드')
     volumes:
       - state:/state            # 파일명만 기록 (개인정보 없음)
+      # 실제 운임(비공개). 서버의 ~/secrets/ 에 두고 읽기 전용으로 덮어쓴다 (이미지에 포함하지 않음)
+      - ${FACTORY_LOCAL_YAML:?.env 에 FACTORY_LOCAL_YAML=/home/ubuntu/secrets/factory.local.yaml 처럼 실제 파일 경로를 적으세요}:/app/config/factory.local.yaml:ro
     ports:
       - "127.0.0.1:8501:8501"   # 서버 밖에서 직접 접근 불가 (Tailscale serve 로만 노출)
 volumes:
