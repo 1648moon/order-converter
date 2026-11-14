@@ -59,6 +59,18 @@ with tempfile.TemporaryDirectory() as t:
     assert "열지 못했습니다" in discord_notify.Notifier(out, None, None, None, open_web=boom).reply_for("웹")
     assert not bot.enabled
 
+    # WEB_REMOTE_URL: 설정하면 '웹' 명령이 로컬 대신 서버 주소를 연다
+    assert serve.remote_web_url(" https://srv.example.ts.net/ ") == "https://srv.example.ts.net"
+    assert serve.remote_web_url("") is None and serve.remote_web_url(None) is None
+    assert serve.remote_web_url("srv.example.ts.net") is None             # 스킴이 없으면 무시 (로컬로 동작)
+    seen = []
+    local_open = serve.make_open_web("http://127.0.0.1:8765", None, opener=seen.append)
+    assert "127.0.0.1:8765" in local_open() and seen == ["http://127.0.0.1:8765"]
+    seen.clear()
+    remote_open = serve.make_open_web("http://127.0.0.1:8765", "https://srv.example.ts.net", opener=seen.append)
+    msg = remote_open()
+    assert seen == ["https://srv.example.ts.net"] and "https://srv.example.ts.net" in msg and "127.0.0.1" not in msg
+
     sent = []
 
     def fake_runner(src, out_root):

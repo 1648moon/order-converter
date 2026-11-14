@@ -3,6 +3,7 @@
     .venv/bin/python src/serve.py        ->  http://127.0.0.1:8765
 
 .env (커밋 금지)에 DISCORD_TOKEN, DISCORD_CHANNEL_ID, DISCORD_OWNER_ID, BRAND_NAME 을 적는다.
+WEB_REMOTE_URL (선택)을 적으면 디스코드 '웹' 명령이 맥 로컬 서버 대신 그 주소(Oracle 서버)를 연다.
 OUTPUT_ROOT / INPUT_ROOT (절대경로, 선택)를 적으면 어느 폴더(워크트리 포함)에서 실행해도
 결과·업로드 파일이 그 경로에 저장된다. 이 폴더에 .env 가 없으면 메인 저장소의 .env 를 읽는다.
 """
@@ -55,6 +56,23 @@ def env_path(name: str, default: Path) -> Path:
     return p
 
 
+def remote_web_url(value: str | None) -> str | None:
+    """.env 의 WEB_REMOTE_URL (예: 서버의 Tailscale 주소). http(s):// 로 시작하지 않으면 무시한다."""
+    v = (value or "").strip().rstrip("/")
+    return v if v.startswith(("http://", "https://")) else None
+
+
+def make_open_web(local_url: str, remote_url: str | None, opener=webbrowser.open):
+    """디스코드 '웹' 명령 동작. remote_url 이 있으면 이 맥의 로컬 서버 대신 그 주소(Oracle 서버)를 연다."""
+    def open_web() -> str:
+        if remote_url:
+            opener(remote_url)
+            return f"서버(Oracle) 웹 페이지입니다. 파일은 여기서 올려 주세요: {remote_url}"
+        opener(local_url)
+        return f"웹 페이지를 열었습니다. 맥 화면에서 파일을 올려 주세요 ({local_url})"
+    return open_web
+
+
 def main() -> None:
     env_file = ROOT / ".env"
     if not env_file.exists():
@@ -66,15 +84,15 @@ def main() -> None:
     port = int(os.environ.get("WEB_PORT", "8765"))
     url = f"http://127.0.0.1:{port}"
 
-    def open_web() -> str:
-        """디스코드 '웹' 명령: 이 맥의 기본 브라우저에서 업로드 페이지를 연다."""
-        webbrowser.open(url)
-        return f"웹 페이지를 열었습니다. 맥 화면에서 파일을 올려 주세요 ({url})"
+    remote_url = remote_web_url(os.environ.get("WEB_REMOTE_URL"))
+    open_web = make_open_web(url, remote_url)
 
     notifier = discord_notify.Notifier.from_env(output_root, open_web=open_web)
     notifier.start()
     app = webapp.create_app(ROOT, notify=notifier.notify, input_dir=input_dir, output_root=output_root)
     print(f"웹 페이지: {url}  (이 컴퓨터에서만 접속 가능)")
+    if remote_url:
+        print(f"디스코드 '웹' 명령은 서버 주소를 엽니다: {remote_url}")
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)
 
 

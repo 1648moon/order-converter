@@ -101,6 +101,7 @@ DISCORD_OWNER_ID=...
 INPUT_ROOT=/절대/경로/input    # 업로드 파일 저장 폴더 (기본: 저장소 안 input/)
 OUTPUT_ROOT=/절대/경로/output  # 결과 폴더 (기본: 저장소 안 output/)
 # WEB_PORT=8765              # 웹 화면 포트 (기본 8765)
+# WEB_REMOTE_URL=https://<서버이름>.<tailnet>.ts.net   # 디스코드 '웹' 명령이 맥 대신 서버(Oracle) 주소를 열게 함
 # ANTHROPIC_API_KEY=...      # --llm 옵션(AI 상품명 제안)을 쓸 때만
 ```
 
