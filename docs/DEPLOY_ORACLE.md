@@ -74,7 +74,8 @@ APP_PASSWORD=긴-비밀번호-입력
 BRAND_NAME=브랜드명
 FACTORY_LOCAL_YAML=/home/ubuntu/secrets/factory.local.yaml
 EOF
-chmod 600 .env ~/secrets/factory.local.yaml
+chmod 600 .env
+chmod 644 ~/secrets/factory.local.yaml   # 컨테이너는 app(uid 1000)으로 실행돼 600이면 읽지 못합니다 (Permission denied)
 docker compose up -d --build
 docker compose ps          # app 이 running 인지 확인
 curl -s localhost:8501/_stcore/health   # ok
