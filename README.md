@@ -52,7 +52,7 @@
 - **승인은 코드가 합니다.** Claude 에게는 조회·제안 도구만 있고 적용 도구가 없습니다. `승인`/`거절`/(대기 제안이 하나일 때) `네`·`아니요`는 Claude 를 거치지 않고 `src/agent_chat.py`가 처리하며, 허용된 사용자(`DISCORD_OWNER_ID`, `DISCORD_ALLOWED_IDS`)의 메시지에만 반응합니다. 제안은 24시간 뒤 만료됩니다.
 - **Claude 가 보는 정보:** 주문 건수, 단계 이름, 상품명, 사용자가 채팅에 쓴 글뿐입니다(`src/run_report.py`, `src/agent_tools.py`). 이름·전화·주소와 스크립트 경고 원문은 넘기지 않고, 전화번호 모양은 한 번 더 지웁니다. 기존 운임표 금액도 보여 주지 않습니다.
 - **바뀌는 곳:** 운임은 `factory.agent.yaml`(운임표 위쪽에 끼워 넣음), 상품 표기는 `product_map.yaml`. 서버에서는 `ORDER_RULES_DIR=/state/rules` 볼륨에 저장되어 재빌드해도 남고, 저장소의 `config/`는 바뀌지 않습니다. 쌓인 규칙을 코드로 옮기려면 그 파일 내용을 PR 로 `config/`에 반영합니다.
-- 설정: `.env`에 `ANTHROPIC_API_KEY`(선택, 없으면 정해진 문장만 처리), `ORDER_AGENT_MODEL`(기본 `claude-opus-5-5`).
+- 설정: `.env`에 `ANTHROPIC_API_KEY`(선택, 없으면 정해진 문장만 처리), `ORDER_AGENT_MODEL`(기본 `claude-sonnet-5-5`).
 - 같은 `DISCORD_TOKEN`으로 맥(`src/serve.py`)과 서버가 동시에 접속하면 답이 두 번 옵니다. 한 곳에서만 켜세요.
 
 ## 실행 방법
