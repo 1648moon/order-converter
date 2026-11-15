@@ -59,6 +59,20 @@ with tempfile.TemporaryDirectory() as t:
     assert "열지 못했습니다" in discord_notify.Notifier(out, None, None, None, open_web=boom).reply_for("웹")
     assert not bot.enabled
 
+    # 명령 허용 사용자: 본인 + DISCORD_ALLOWED_IDS
+    assert discord_notify.parse_ids("111, 222 333,,x1") == ({111, 222, 333}, ["x1"])
+    assert discord_notify.parse_ids("") == (set(), []) and discord_notify.parse_ids(None) == (set(), [])
+    multi = discord_notify.Notifier(out, None, None, 100, allowed_ids={200, 300})
+    assert multi.is_allowed(100) and multi.is_allowed(200) and multi.is_allowed(300)
+    assert not multi.is_allowed(999)                                     # 목록에 없는 사용자는 무반응
+    assert not discord_notify.Notifier(out, None, None, None).is_allowed(999)
+    assert discord_notify.Notifier(out, None, None, None, allowed_ids=[7]).is_allowed(7)   # 본인 ID 가 비어도 목록은 동작
+    assert not discord_notify.Notifier(out, None, None, None).is_allowed(0)
+    os.environ["DISCORD_ALLOWED_IDS"] = "400 500, abc"
+    os.environ["DISCORD_OWNER_ID"] = "100"
+    env_bot = discord_notify.Notifier.from_env(out)
+    assert env_bot.allowed_ids == {400, 500} and env_bot.is_allowed(100) and env_bot.is_allowed(500) and not env_bot.is_allowed(600)
+
     # WEB_REMOTE_URL: 설정하면 '웹' 명령이 로컬 대신 서버 주소를 연다
     assert serve.remote_web_url(" https://srv.example.ts.net/ ") == "https://srv.example.ts.net"
     assert serve.remote_web_url("") is None and serve.remote_web_url(None) is None
