@@ -44,13 +44,15 @@ class AgentChat:
     def __init__(self, store: Store | None = None, brain=None):
         self.store = store or Store()
         self.brain = brain
+        self._awaiting: dict[str, bool] = {}     # 채널별: 봇의 직전 메시지가 '제안 안내'였나 (짧은 네/아니요를 승인으로 볼 조건)
 
     # ---- 진입점 ----
     def handle(self, text: str, channel: str = "main") -> list[str]:
         text = text.strip()
         if not text:
             return []
-        done = self._approval(text)
+        awaiting = self._awaiting.pop(channel, False)       # 어떤 경우에도 이번 턴이 끝나면 꺼진다
+        done = self._approval(text, awaiting)
         if done is not None:
             return done
         before = {p["id"] for p in self.store.pending()}
@@ -59,11 +61,13 @@ class AgentChat:
         else:
             reply = self._fallback(text)
         out = [reply] if reply else []
-        out += [proposal_text(p) for p in self.store.pending() if p["id"] not in before]
+        announced = [p for p in self.store.pending() if p["id"] not in before]
+        out += [proposal_text(p) for p in announced]
+        self._awaiting[channel] = bool(announced)           # 마지막 메시지가 제안 안내일 때만 '네'를 승인으로 본다
         return out
 
     # ---- 승인 / 거절 (LLM 을 거치지 않음) ----
-    def _approval(self, text: str) -> list[str] | None:
+    def _approval(self, text: str, awaiting: bool = False) -> list[str] | None:
         pending = self.store.pending()
         action, pid = None, None
         m = _APPROVE.match(text)
@@ -72,7 +76,7 @@ class AgentChat:
             action, pid = "approve", m.group(2)
         elif r:
             action, pid = "reject", r.group(2)
-        elif pending:                                  # 짧은 네/아니요: 대기 제안이 하나면 그것, 여럿이면 번호를 되묻는다
+        elif pending and awaiting:                     # 짧은 네/아니요: 봇이 방금 제안을 안내했을 때만. 하나면 그것, 여럿이면 번호를 되묻는다
             kind = chat.answer_kind(text)
             if kind in ("yes", "no"):
                 action = "approve" if kind == "yes" else "reject"
@@ -111,6 +115,8 @@ class AgentChat:
         if rule:
             out = agent_tools.run_tool("propose_fee_rule", {"product": rule[0], "fee": rule[1]}, self.store)
             return out.get("error") or ""      # 성공이면 proposal_text 가 따로 붙는다
+        if self.store.pending() and chat.answer_kind(text) in ("yes", "no"):
+            return "승인하려면 '승인 번호', 거절하려면 '거절 번호'라고 답해 주세요. (예: 승인 1)"
         return ("지금은 AI 연결이 꺼져 있어요. '시애틀F28 미조립 운임 16000' 처럼 말해 주시면 제안을 만들 수 있어요. "
                 "'승인 번호', '거절 번호'로 답해 주세요.")
 

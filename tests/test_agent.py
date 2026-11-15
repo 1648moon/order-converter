@@ -229,11 +229,11 @@ chat = AC.AgentChat(s, brain=None)                                              
 r = chat.handle("시애틀F55 미조립 운임 16000")
 assert len(r) == 1 and r[0].startswith("📝 변경 제안 #1"), r
 assert F.shipping_fee_info("시애틀F55/블랙", None, F.load_cfg())[1] is False         # 승인 전에는 적용되지 않았다
-assert chat.handle("승인 7") == ["#7 제안을 찾지 못했어요."]
-r = chat.handle("네")                                                               # 대기 제안이 하나뿐일 때만 '네' 로 승인
+r = chat.handle("네")                                                               # 봇이 제안을 안내한 직후의 '네' = 승인
 assert r[0].startswith("✅") and "다시 올려" in r[0]
 assert F.shipping_fee_info("시애틀F55/블랙", None, F.load_cfg()) == (16000, True)
 assert chat.handle("승인 1")[0] == "#1 제안은 이미 적용됐어요."                          # 두 번 적용되지 않는다
+assert chat.handle("승인 7") == ["#7 제안을 찾지 못했어요."]
 chat.handle("시애틀F56 미조립 운임 11000")
 chat.handle("시애틀F57 미조립 운임 12000")
 assert "여러 개" in chat.handle("네")[0] and "#2" in chat.handle("승인")[0]                  # 둘 이상이면 번호를 요구
@@ -271,6 +271,54 @@ assert DN.split_message("x" * 5000) and all(len(p) <= DN.DISCORD_LIMIT for p in 
 n = DN.Notifier(None, None, None, 1, allowed_ids=[2], agent_handler=lambda t: [t])
 assert n.is_allowed(1) and n.is_allowed(2) and not n.is_allowed(3)
 assert n.reply_for("상태") is not None and n.reply_for("시애틀F28 운임 1000") is None           # 일반 문장은 에이전트로 넘어간다
+
+# ---- 11. 회귀: 제안이 대기 중일 때 Claude 의 다른 질문에 한 '네'가 그 제안을 승인하면 안 된다 ----
+s = fresh_store()
+s.save_run(RUN)
+fc = FakeClient([
+    NS(stop_reason="tool_use", content=[tool_use("t1", "propose_fee_rule", product="시애틀F71", fee=12000)]),
+    NS(stop_reason="end_turn", content=[text("제안을 올렸어요.")]),
+    NS(stop_reason="end_turn", content=[text("이 표기로 제안할까요?")]),          # 다음 턴: 운임과 상관없는 질문
+    NS(stop_reason="end_turn", content=[text("알겠어요, 제안할게요.")]),
+])
+chat = AC.AgentChat(s, agent_llm.Brain(fc, s))
+chat.handle("시애틀F71 운임 12000")                                              # 제안 #1 안내
+assert chat.handle("헬멧 표기도 봐줘") == ["이 표기로 제안할까요?"]
+assert chat.handle("네") == ["알겠어요, 제안할게요."]                              # 답은 Claude 가 한다
+assert s.get_proposal(1)["status"] == "pending"                                 # 운임 제안은 그대로 대기
+assert F.shipping_fee_info("시애틀F71/블랙", None, F.load_cfg())[1] is False
+assert chat.handle("승인 1")[0].startswith("✅")                                  # 번호를 붙이면 언제든 승인된다
+assert F.shipping_fee_info("시애틀F71/블랙", None, F.load_cfg()) == (12000, True)
+# 제안 안내 직후의 '네'는 승인, 그다음 턴부터는 다시 일반 대화
+s = fresh_store()
+chat = AC.AgentChat(s, None)
+chat.handle("시애틀F72 미조립 운임 9000")
+assert chat.handle("네")[0].startswith("✅")
+chat.handle("시애틀F73 미조립 운임 9500")
+chat.handle("아무 말")                                                            # 안내 뒤 다른 말 -> 플래그 해제
+assert "승인 번호" in chat.handle("네")[0] and s.get_proposal(2)["status"] == "pending"
+# 채널이 다르면 서로의 '직전 안내'를 공유하지 않는다
+s = fresh_store()
+chat = AC.AgentChat(s, None)
+chat.handle("시애틀F74 미조립 운임 9000", channel="A")
+assert chat.handle("네", channel="B")[0].startswith("승인하려면")
+assert s.get_proposal(1)["status"] == "pending"
+
+# ---- 12. 서버 봇 연결 스모크: DISCORD_* 없이도 에이전트 핸들러가 붙고, 제안 -> 승인 -> 파일 기록까지 간다 ----
+for k in ("DISCORD_TOKEN", "DISCORD_CHANNEL_ID", "DISCORD_OWNER_ID", "DISCORD_ALLOWED_IDS", "ANTHROPIC_API_KEY"):
+    os.environ.pop(k, None)
+DN._server_notifier = None
+bot = DN.server_notifier()
+assert bot.agent_handler is not None and not bot.enabled
+msgs = bot.agent_handler("시애틀F88 미조립 운임 16000")
+assert msgs and msgs[-1].startswith("📝 변경 제안 #")
+num = msgs[-1].split("#")[1].split("\n")[0]
+assert "시애틀F88" not in (rules.agent_fee_path().read_text(encoding="utf-8") if rules.agent_fee_path().exists() else "")
+done = bot.agent_handler(f"승인 {num}")
+assert done[0].startswith("✅") and "시애틀F88" in rules.agent_fee_path().read_text(encoding="utf-8")
+DN._server_notifier = None
+boom = DN.Notifier(None, None, None, 1, agent_handler=lambda t: 1 / 0)             # 핸들러가 터져도 봇은 계속
+assert DN.Notifier._safe_agent(boom, "x") == ["처리 중 문제가 생겼어요. 잠시 뒤 다시 말씀해 주세요."]
 
 if _saved_ignore is not None:
     os.environ["FACTORY_IGNORE_LOCAL"] = _saved_ignore
