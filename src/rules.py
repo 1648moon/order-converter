@@ -85,6 +85,14 @@ def _second_color(text: str, end: int, terms: dict) -> str:
     return ""
 
 
+def _color_in_name(text: str, terms: dict) -> str:
+    """상품명 안의 색상 단어(terms.yaml color_words). 긴 단어 우선('스카이블루' 가 '블루' 보다 먼저)."""
+    for w in sorted(terms.get("color_words") or [], key=len, reverse=True):
+        if w in text:
+            return w
+    return ""
+
+
 def extract_color(option, terms: dict) -> str | None:
     text = _s(option)
     for pat in terms["color_patterns"]:
@@ -133,6 +141,10 @@ def convert_product(name, option, terms: dict):
             values = {}
             values["color"] = extract_color(option, terms) or ""
             values["count"] = count_suffix(option)
+            if not values["color"] and rule.get("color_from_name"):
+                values["color"] = _color_in_name(text, terms)   # 선택사항에 색상이 없으면 상품명에서
+                if not values["count"]:
+                    values["count"] = count_suffix(text)
             skip = False
             for var, pats in (rule.get("vars") or {}).items():
                 for pat in pats:
