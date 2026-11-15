@@ -134,3 +134,20 @@ class Notifier:
             fut.result(timeout=15)
         except Exception as e:                      # 알림 실패가 변환 결과에 영향 주지 않게
             print(f"[디스코드] 알림 전송 실패: {type(e).__name__}")
+
+
+_server_notifier: Notifier | None = None
+
+
+def server_notifier() -> Notifier:
+    """서버(Streamlit)용 알림봇. 프로세스당 한 번만 만들어 접속한다 (Streamlit 은 화면마다 스크립트를 다시 실행).
+    서버는 결과를 저장하지 않으므로 output_root 는 None (상태·목록 명령은 안내 문구로 응답).
+    '웹' 명령은 WEB_REMOTE_URL 이 http(s) 로 시작하면 그 주소를 안내한다."""
+    global _server_notifier
+    if _server_notifier is None:
+        remote = (os.environ.get("WEB_REMOTE_URL") or "").strip().rstrip("/")
+        open_web = (lambda: f"웹 페이지입니다. 파일은 여기서 올려 주세요: {remote}") \
+            if remote.startswith(("http://", "https://")) else None
+        _server_notifier = Notifier.from_env(None, open_web=open_web)
+        _server_notifier.start()
+    return _server_notifier

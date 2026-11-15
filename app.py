@@ -37,18 +37,6 @@ FACTORY_RE = re.compile(rf"^\d{{2}}-\d{{2}}-\d{{2}} {re.escape(naming.brand())}�
 st.set_page_config(page_title="주문 엑셀 변환", page_icon="📦")
 
 
-@st.cache_resource
-def get_notifier() -> discord_notify.Notifier:
-    """디스코드 알림봇을 서버 프로세스당 한 번만 띄운다 (Streamlit 은 화면을 다시 그릴 때마다 스크립트를 재실행).
-    DISCORD_TOKEN / DISCORD_CHANNEL_ID 가 없으면 알림은 콘솔에만 출력된다. 서버에는 결과를 저장하지 않으므로
-    output_root 는 None (상태·목록 명령은 기록이 없다고 안내)."""
-    remote = (os.environ.get("WEB_REMOTE_URL") or "").strip().rstrip("/")
-    open_web = (lambda: f"웹 페이지입니다. 파일은 여기서 올려 주세요: {remote}") if remote.startswith("http") else None
-    notifier = discord_notify.Notifier.from_env(None, open_web=open_web)
-    notifier.start()
-    return notifier
-
-
 def check_password() -> bool:
     expected = os.environ.get("APP_PASSWORD", "")
     if not expected:
@@ -119,7 +107,6 @@ def prune_state() -> None:
                 p.unlink(missing_ok=True)
 
 
-get_notifier()          # 서버가 켜지면 봇도 바로 접속 (첫 변환 전에도 '웹' 명령에 응답)
 st.title("📦 주문 엑셀 변환")
 
 if check_password():
@@ -132,7 +119,7 @@ if check_password():
         with st.spinner("변환·검증 중..."):
             try:
                 st.session_state["result"] = convert(up.getvalue(), up.name)
-                get_notifier().notify(st.session_state["result"]["notice"])
+                discord_notify.server_notifier().notify(st.session_state["result"]["notice"])
             except subprocess.TimeoutExpired:
                 st.error("시간이 너무 오래 걸려 중단했습니다.")
 
