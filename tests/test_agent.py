@@ -180,7 +180,7 @@ fc = FakeClient([
 chat = AC.AgentChat(s, agent_llm.Brain(fc, s))
 msgs = chat.handle("시애틀F99 운임 16000원이야")
 assert "승인 1" in msgs[0] and msgs[1].startswith("📝 변경 제안 #1") and "16,000원" in msgs[1]     # 코드가 만든 안내가 따로 붙는다
-assert fc.calls[0]["model"] == "claude-opus-5-5" and "tool_choice" not in fc.calls[0]
+assert fc.calls[0]["model"] == "claude-sonnet-5-5" and "tool_choice" not in fc.calls[0]
 assert fc.calls[0]["output_config"] == {"effort": "medium"}
 assert s.get_proposal(1)["status"] == "pending"                                                    # 아직 적용 전
 assert F.shipping_fee("시애틀F99/블랙", None, F.load_cfg()) == 17000                                # (앞 테스트 값 그대로)

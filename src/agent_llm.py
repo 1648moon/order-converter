@@ -12,7 +12,7 @@ from collections import defaultdict
 import agent_tools
 from agent_state import Store
 
-MODEL = os.environ.get("ORDER_AGENT_MODEL", "claude-opus-5-5")
+MODEL = os.environ.get("ORDER_AGENT_MODEL", "claude-sonnet-5-5")
 MAX_ROUNDS = 6
 HISTORY_TURNS = 8            # 채널별로 기억하는 (사용자, 답변) 쌍 수
 MAX_TOKENS = 4096
