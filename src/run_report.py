@@ -69,13 +69,20 @@ def fee_missing_products(intermediate: Path) -> list[str]:
     return _names(F.fee_warnings(ws, h, kd, cfg))
 
 
+def converted_source(run_dir: Path | None) -> Path | None:
+    """.xls 원본은 run_all 이 run_dir/원본변환/ 에 .xlsx 로 바꿔 쓴다. 그 파일이 있으면 원본 대신 그것을 읽는다."""
+    if not run_dir:
+        return None
+    return next(iter(sorted((Path(run_dir) / "원본변환").glob("*.xlsx"))), None)
+
+
 def build_record(src: Path, run_dir: Path | None, summary) -> dict:
     """summary: runinfo.RunSummary. 일부를 읽지 못해도 가능한 만큼만 채워 돌려준다(변환 결과에는 영향 없음)."""
     rec = {"run": summary.name, "overall": summary.overall, "files": len(summary.files),
            "warn_stages": list(summary.warn_stages), "fail_stages": list(summary.fail_stages),
            "orders": None, "unmatched_products": [], "fee_missing_products": [], "partial": False}
     try:
-        rec["orders"], rec["unmatched_products"] = unmatched_products(src)
+        rec["orders"], rec["unmatched_products"] = unmatched_products(converted_source(run_dir) or src)
     except Exception:
         rec["partial"] = True
     try:
