@@ -13,3 +13,6 @@ state/
 
 # 실제 운임 등 커밋하지 않는 로컬 설정 (factory.yaml 위에 덮어쓴다)
 config/*.local.yaml
+
+# 에이전트가 승인받아 추가한 운임 (서버 볼륨/로컬 규칙 폴더)
+config/*.agent.yaml

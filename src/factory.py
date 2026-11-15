@@ -32,6 +32,7 @@ from openpyxl.utils import get_column_letter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import naming  # noqa: E402
+import rules  # noqa: E402
 import xlsxkit as xk  # noqa: E402
 from convert import KEY, active_rows, header_map  # noqa: E402
 
@@ -60,7 +61,22 @@ def load_cfg(path: Path = DEFAULT_CFG) -> dict:
     local = local_path(path)
     if local.exists() and not os.environ.get("FACTORY_IGNORE_LOCAL"):
         cfg = _merge(cfg, yaml.safe_load(local.read_text(encoding="utf-8")) or {})
+    if not os.environ.get("FACTORY_IGNORE_LOCAL"):
+        cfg = with_agent_rules(cfg)
     return cfg
+
+
+def with_agent_rules(cfg: dict, extra: list[dict] | None = None) -> dict:
+    """에이전트가 승인받아 추가한 미조립 운임 규칙을 운임표 맨 위(모델 무관 조립 규칙 바로 아래)에 끼운다.
+    구체적인 상품 규칙이 먼저 검사되도록 하는 위치이고, 같은 모델의 기존 규칙보다 우선한다."""
+    extra = rules.load_agent_fee_rules() if extra is None else extra
+    if not extra:
+        return cfg
+    base = list(cfg.get("shipping_rules") or [])
+    i = 0
+    while i < len(base) and base[i].get("assembled") is True and "product_contains" not in base[i]:
+        i += 1
+    return {**cfg, "shipping_rules": base[:i] + [dict(r) for r in extra] + base[i:]}
 
 
 def _s(v) -> str:

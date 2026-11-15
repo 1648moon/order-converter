@@ -73,6 +73,8 @@ cat > .env <<'EOF'
 APP_PASSWORD=긴-비밀번호-입력
 BRAND_NAME=브랜드명
 FACTORY_LOCAL_YAML=/home/ubuntu/secrets/factory.local.yaml
+# 디스코드 알림·에이전트(선택): DISCORD_TOKEN, DISCORD_CHANNEL_ID, DISCORD_OWNER_ID, DISCORD_ALLOWED_IDS
+# 에이전트가 AI 로 대화하게 하려면(선택, 사용량만큼 비용 발생): ANTHROPIC_API_KEY=sk-ant-...
 EOF
 chmod 600 .env
 chmod 644 ~/secrets/factory.local.yaml   # 컨테이너는 app(uid 1000)으로 실행돼 600이면 읽지 못합니다 (Permission denied)

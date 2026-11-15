@@ -2,6 +2,8 @@
 
 - 파일은 절대 주고받지 않는다. 텍스트 알림과 간단한 일반 메시지 명령('상태', '목록', '웹')만 처리한다.
   '웹' 은 이 맥의 브라우저에서 업로드 페이지를 열 뿐, 디스코드로 파일을 받지 않는다.
+- 위 명령이 아닌 말은 agent_handler(src/agent_chat.py)로 넘긴다: 변경을 '제안'하고 사람이 '승인 번호'라고 답하면 적용.
+  승인·거절은 LLM 이 아니라 코드가 처리한다. 파일을 받지 않고 개인정보도 다루지 않는 점은 그대로다.
 - 명령은 DISCORD_OWNER_ID 본인과 DISCORD_ALLOWED_IDS(쉼표로 구분한 추가 사용자 ID)에 적은 사람의 메시지에만 반응한다.
   그 밖의 사용자는 어떤 말에도 무반응이다.
 - DISCORD_TOKEN / DISCORD_CHANNEL_ID 가 없으면 알림을 콘솔에만 출력한다(봇 없이도 웹은 동작).
@@ -28,13 +30,33 @@ def parse_ids(value: str | None) -> tuple[set[int], list[str]]:
 
 
 WEB_WORDS = ("웹", "web", "업로드")        # 이 말을 보내면 맥에서 업로드 페이지를 연다 (파일은 디스코드로 보내지 않음)
+DISCORD_LIMIT = 1900                        # 디스코드 메시지 최대 2000자
+
+
+def split_message(text: str, limit: int = DISCORD_LIMIT) -> list[str]:
+    """긴 문장을 줄 단위로 limit 이하로 나눈다."""
+    out, cur = [], ""
+    for line in text.split("\n"):
+        while len(line) > limit:
+            if cur:
+                out.append(cur); cur = ""
+            out.append(line[:limit]); line = line[limit:]
+        if len(cur) + len(line) + 1 > limit and cur:
+            out.append(cur); cur = ""
+        cur = f"{cur}\n{line}" if cur else line
+    if cur:
+        out.append(cur)
+    return out
 
 
 class Notifier:
     def __init__(self, output_root, token: str | None, channel_id: int | None, owner_id: int | None,
-                 open_web: Callable[[], str] | None = None, allowed_ids=()):
-        """open_web: '웹' 명령을 받으면 호출. 맥에서 업로드 페이지를 열고 안내 문구(주소 등)를 돌려준다."""
+                 open_web: Callable[[], str] | None = None, allowed_ids=(),
+                 agent_handler: Callable[[str], list[str]] | None = None):
+        """open_web: '웹' 명령을 받으면 호출. 맥에서 업로드 페이지를 열고 안내 문구(주소 등)를 돌려준다.
+        agent_handler: 위 명령이 아닌 말(허용된 사용자만)을 받아 보낼 문장 목록을 돌려준다 (agent_chat.default_handler)."""
         self.open_web = open_web
+        self.agent_handler = agent_handler
         self.output_root = output_root
         self.token, self.channel_id, self.owner_id = token, channel_id, owner_id
         self.allowed_ids = {int(i) for i in allowed_ids}          # 본인 외에 명령을 허용할 사용자 ID
@@ -43,7 +65,8 @@ class Notifier:
         self._ready = threading.Event()
 
     @classmethod
-    def from_env(cls, output_root, open_web: Callable[[], str] | None = None) -> "Notifier":
+    def from_env(cls, output_root, open_web: Callable[[], str] | None = None,
+                 agent_handler: Callable[[str], list[str]] | None = None) -> "Notifier":
         def to_int(v):
             return int(v) if v and v.strip().isdigit() else None
         allowed, bad = parse_ids(os.environ.get("DISCORD_ALLOWED_IDS"))
@@ -51,7 +74,8 @@ class Notifier:
             print(f"[디스코드] DISCORD_ALLOWED_IDS 에서 숫자가 아닌 항목을 무시했습니다: {', '.join(bad)}")
         return cls(output_root, os.environ.get("DISCORD_TOKEN") or None,
                    to_int(os.environ.get("DISCORD_CHANNEL_ID")),
-                   to_int(os.environ.get("DISCORD_OWNER_ID")), open_web=open_web, allowed_ids=allowed)
+                   to_int(os.environ.get("DISCORD_OWNER_ID")), open_web=open_web, allowed_ids=allowed,
+                   agent_handler=agent_handler)
 
     @property
     def enabled(self) -> bool:
@@ -77,6 +101,14 @@ class Notifier:
             runs = runinfo.recent_runs(self.output_root, limit=1 if word == "상태" else 5)
             return runinfo.status_text(runs)
         return None
+
+    def _safe_agent(self, content: str) -> list[str]:
+        """에이전트 오류가 봇 전체를 멈추지 않게 한다 (오류 내용은 값 노출을 피해 종류만 알린다)."""
+        try:
+            return self.agent_handler(content)
+        except Exception as e:
+            print(f"[에이전트] 처리 중 오류: {type(e).__name__}")
+            return ["처리 중 문제가 생겼어요. 잠시 뒤 다시 말씀해 주세요."]
 
     # ---- 봇 실행 ----
     def start(self) -> None:
@@ -116,6 +148,12 @@ class Notifier:
             reply = self.reply_for(msg.content)
             if reply:
                 await msg.channel.send(reply)
+            elif self.agent_handler is not None:
+                async with msg.channel.typing():           # AI 응답을 기다리는 동안 '입력 중' 표시
+                    texts = await asyncio.to_thread(self._safe_agent, msg.content)
+                for t in texts:
+                    for chunk in split_message(t):
+                        await msg.channel.send(chunk)
 
         client.run(self.token, log_handler=None)
 
@@ -148,6 +186,12 @@ def server_notifier() -> Notifier:
         remote = (os.environ.get("WEB_REMOTE_URL") or "").strip().rstrip("/")
         open_web = (lambda: f"웹 페이지입니다. 파일은 여기서 올려 주세요: {remote}") \
             if remote.startswith(("http://", "https://")) else None
-        _server_notifier = Notifier.from_env(None, open_web=open_web)
+        handler = None
+        try:
+            import agent_chat
+            handler = agent_chat.default_handler()
+        except Exception as e:                      # 에이전트를 못 켜도 알림봇은 그대로 동작
+            print(f"[에이전트] 켜지 못했습니다 ({type(e).__name__}) - 알림과 기본 명령만 동작합니다.")
+        _server_notifier = Notifier.from_env(None, open_web=open_web, agent_handler=handler)
         _server_notifier.start()
     return _server_notifier
