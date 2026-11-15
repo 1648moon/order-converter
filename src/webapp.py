@@ -37,7 +37,7 @@ PAGE = """<!doctype html><html lang="ko"><meta charset="utf-8">
 <h1>주문 엑셀 변환</h1>
 <form class="box" method="post" action="/upload" enctype="multipart/form-data"
       onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='변환 중… (잠시만 기다려주세요)'">
- <input type="file" name="file" accept=".xlsx" required><br>
+ <input type="file" name="file" accept=".xlsx,.xls" required><br>
  <button type="submit">변환하기</button>
  <p><small>파일은 이 컴퓨터에서만 처리되며 디스코드로 올라가지 않습니다.</small></p>
 </form>
@@ -93,8 +93,8 @@ def create_app(root: Path = ROOT, notify: Callable[[str], None] | None = None,
     @app.post("/upload")
     def upload():
         f = request.files.get("file")
-        if not f or not f.filename.lower().endswith(".xlsx"):
-            abort(400, "xlsx 파일만 올릴 수 있습니다.")
+        if not f or not f.filename.lower().endswith((".xlsx", ".xls")):
+            abort(400, "xlsx/xls 파일만 올릴 수 있습니다.")
         input_dir.mkdir(parents=True, exist_ok=True)
         # 원본 파일명은 쓰지 않는다(이름에 개인정보가 있을 수 있음, 경로 조작 방지)
         src = input_dir / f"주문원본_{datetime.now():%Y%m%d_%H%M%S}.xlsx"

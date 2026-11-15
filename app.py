@@ -123,7 +123,7 @@ st.title("📦 주문 엑셀 변환")
 if check_password():
     st.caption("주문원본1 엑셀을 올리면 공장용·택배용·내부보관용 파일을 만들고 검증합니다. "
                "서버에는 파일이 저장되지 않습니다.")
-    up = st.file_uploader("주문원본 엑셀 (.xlsx)", type=["xlsx"])
+    up = st.file_uploader("주문원본 엑셀 (.xlsx / .xls)", type=["xlsx", "xls"])
     if up is not None and st.button("변환 시작", type="primary"):
         prune_state()
         st.session_state.pop("result", None)
