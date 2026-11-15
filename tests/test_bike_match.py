@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 import openpyxl, rules  # noqa: E402
 
-DEFAULT_IN = Path("/Users/moon/Documents/jimini/input/상품목록(20261110).xlsx")
+DEFAULT_IN = ROOT / "input" / "상품목록(20261110).xlsx"
 SENT = "§"   # convert_product 에 넘기는 가짜 색상. 결과에서 '/§' 를 지우면 모델 단위 축약형
 NEW_MODELS = {"첼로부스터24"}   # 내부보관용 표에 아직 없지만 표기를 정해 둔 모델
 # 이미 축약형으로 적힌 값: '시애틀MT26/', '엑스퍼트/미조립박스', '빅마운틴/(2025)', '부스터24'

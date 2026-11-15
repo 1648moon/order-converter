@@ -40,7 +40,7 @@ assert conv("삼천리자전거 레전드 티니핑 어린이 아동용 헬멧 S
 assert conv("삼천리자전거 SPS150L 겨울왕국 보호대 아동용")[0] == "삼천리SPS150어린이보호대"
 assert conv("삼천리자전거 캐치티니핑 하츄핑 어린이 보호장비 무릎 팔꿈치 보호대 세트")[0] == "삼천리SPS150어린이보호대"
 
-xlsx = Path("/Users/moon/Documents/jimini/input/상품목록(20261110)_전체축약.xlsx")
+xlsx = Path(__file__).resolve().parent.parent / "input" / "상품목록(20261110)_전체축약.xlsx"
 if xlsx.exists():
     import openpyxl
     ws = openpyxl.load_workbook(xlsx).active
