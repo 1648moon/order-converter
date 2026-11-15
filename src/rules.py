@@ -1,13 +1,39 @@
 """변환 규칙 (convert.py, validate.py 공용). 규칙 데이터는 config/terms.yaml."""
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
 import yaml
 
 DEFAULT_TERMS = Path(__file__).resolve().parent.parent / "config" / "terms.yaml"
-DEFAULT_MAP = DEFAULT_TERMS.with_name("product_map.yaml")
+
+
+def rules_dir() -> Path:
+    """사람이 승인해 늘어나는 규칙(상품명 매핑, 에이전트가 추가한 운임)을 두는 폴더.
+    서버(Docker)에서는 ORDER_RULES_DIR=/state/rules 처럼 재시작·재빌드에도 남는 볼륨을 가리킨다.
+    환경변수가 없으면 예전처럼 config/ 폴더."""
+    env = os.environ.get("ORDER_RULES_DIR")
+    return Path(env) if env else DEFAULT_TERMS.parent
+
+
+DEFAULT_MAP = rules_dir() / "product_map.yaml"
+AGENT_FEE_NAME = "factory.agent.yaml"
+
+
+def agent_fee_path() -> Path:
+    return rules_dir() / AGENT_FEE_NAME
+
+
+def load_agent_fee_rules(path: Path | None = None) -> list[dict]:
+    """에이전트가 사람의 승인을 받아 추가한 미조립 운임 규칙: [{assembled, product_contains, fee}, ...]."""
+    p = Path(path) if path else agent_fee_path()
+    if not p.exists():
+        return []
+    data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    return [dict(r) for r in (data.get("shipping_rules_extra") or [])
+            if isinstance(r, dict) and r.get("product_contains") and isinstance(r.get("fee"), int)]
 STORAGE_CFG = DEFAULT_TERMS.with_name("storage.yaml")   # 내부 정산(내부보관용)의 축약 자전거명 목록(product_list)
 LLM_WARN = "LLM 제안값 적용(미확인)"   # convert_product 경고 접두어. 확인 후 product_map.yaml 의 status 를 ok 로
 

@@ -1,5 +1,6 @@
 FROM python:3.12-slim
-ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 NAME_STATE_DIR=/state
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 NAME_STATE_DIR=/state \
+    ORDER_RULES_DIR=/state/rules AGENT_STATE_DIR=/state/agent
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt

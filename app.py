@@ -28,8 +28,11 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("NAME_STATE_DIR", ROOT / "state"))
 sys.path.insert(0, str(ROOT / "src"))
+import agent_chat  # noqa: E402
+import agent_state  # noqa: E402
 import discord_notify  # noqa: E402
 import naming  # noqa: E402
+import run_report  # noqa: E402
 import runinfo  # noqa: E402
 
 FACTORY_RE = re.compile(rf"^\d{{2}}-\d{{2}}-\d{{2}} {re.escape(naming.brand())}주문\(\d\)-\d+\.xlsx$")
@@ -73,9 +76,17 @@ def convert(data: bytes, filename: str) -> dict:
                       and not d.is_symlink())
         files, summary = {}, ""
         notice = "❌ 변환 실패 · 실행 결과 폴더를 만들지 못했습니다"
+        issues = None
         if runs:
             run_dir = runs[-1]
-            notice = runinfo.notify_text(runinfo.summarize_run(run_dir))    # 개인정보 없는 한 줄
+            run_summary = runinfo.summarize_run(run_dir)
+            notice = runinfo.notify_text(run_summary)    # 개인정보 없는 한 줄
+            try:     # 디스코드 에이전트가 대화에 쓸 '개인정보 없는' 요약 (실패해도 변환 결과에는 영향 없음)
+                record = run_report.build_record(src, run_dir, run_summary)
+                agent_state.Store().save_run(record)
+                issues = agent_chat.issues_message(record)
+            except Exception:
+                issues = None
             summary_file = run_dir / "실행요약.txt"
             if summary_file.exists():
                 summary = summary_file.read_text(encoding="utf-8")
@@ -85,7 +96,7 @@ def convert(data: bytes, filename: str) -> dict:
                     if FACTORY_RE.match(p.name):
                         (STATE_DIR / p.name).touch()
         return {"code": proc.returncode, "log": proc.stdout + proc.stderr,
-                "summary": summary, "files": files, "notice": notice}
+                "summary": summary, "files": files, "notice": notice, "issues": issues}
 
 
 def zip_files(files: dict) -> bytes:
@@ -119,7 +130,10 @@ if check_password():
         with st.spinner("변환·검증 중..."):
             try:
                 st.session_state["result"] = convert(up.getvalue(), up.name)
-                discord_notify.server_notifier().notify(st.session_state["result"]["notice"])
+                bot = discord_notify.server_notifier()
+                bot.notify(st.session_state["result"]["notice"])
+                if st.session_state["result"].get("issues"):     # 운임·표기를 모르는 상품이 있으면 디스코드에서 이어서 대화
+                    bot.notify(st.session_state["result"]["issues"])
             except subprocess.TimeoutExpired:
                 st.error("시간이 너무 오래 걸려 중단했습니다.")
 
