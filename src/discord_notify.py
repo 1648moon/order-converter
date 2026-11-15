@@ -72,6 +72,8 @@ class Notifier:
             except Exception as e:                   # 브라우저를 못 열어도 봇은 계속 동작
                 return f"웹 페이지를 열지 못했습니다 ({type(e).__name__})."
         if word in ("상태", "목록"):
+            if self.output_root is None:             # 서버(Streamlit)는 결과를 저장하지 않는다
+                return "이 서버는 변환 결과를 저장하지 않아 상태·목록을 알려드릴 수 없습니다. 변환이 끝나면 알림이 옵니다."
             runs = runinfo.recent_runs(self.output_root, limit=1 if word == "상태" else 5)
             return runinfo.status_text(runs)
         return None

@@ -28,11 +28,25 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("NAME_STATE_DIR", ROOT / "state"))
 sys.path.insert(0, str(ROOT / "src"))
+import discord_notify  # noqa: E402
 import naming  # noqa: E402
+import runinfo  # noqa: E402
 
 FACTORY_RE = re.compile(rf"^\d{{2}}-\d{{2}}-\d{{2}} {re.escape(naming.brand())}주문\(\d\)-\d+\.xlsx$")
 
 st.set_page_config(page_title="주문 엑셀 변환", page_icon="📦")
+
+
+@st.cache_resource
+def get_notifier() -> discord_notify.Notifier:
+    """디스코드 알림봇을 서버 프로세스당 한 번만 띄운다 (Streamlit 은 화면을 다시 그릴 때마다 스크립트를 재실행).
+    DISCORD_TOKEN / DISCORD_CHANNEL_ID 가 없으면 알림은 콘솔에만 출력된다. 서버에는 결과를 저장하지 않으므로
+    output_root 는 None (상태·목록 명령은 기록이 없다고 안내)."""
+    remote = (os.environ.get("WEB_REMOTE_URL") or "").strip().rstrip("/")
+    open_web = (lambda: f"웹 페이지입니다. 파일은 여기서 올려 주세요: {remote}") if remote.startswith("http") else None
+    notifier = discord_notify.Notifier.from_env(None, open_web=open_web)
+    notifier.start()
+    return notifier
 
 
 def check_password() -> bool:
@@ -70,8 +84,10 @@ def convert(data: bytes, filename: str) -> dict:
         runs = sorted(d for d in out_root.iterdir() if d.is_dir() and d.name != "latest"
                       and not d.is_symlink())
         files, summary = {}, ""
+        notice = "❌ 변환 실패 · 실행 결과 폴더를 만들지 못했습니다"
         if runs:
             run_dir = runs[-1]
+            notice = runinfo.notify_text(runinfo.summarize_run(run_dir))    # 개인정보 없는 한 줄
             summary_file = run_dir / "실행요약.txt"
             if summary_file.exists():
                 summary = summary_file.read_text(encoding="utf-8")
@@ -81,7 +97,7 @@ def convert(data: bytes, filename: str) -> dict:
                     if FACTORY_RE.match(p.name):
                         (STATE_DIR / p.name).touch()
         return {"code": proc.returncode, "log": proc.stdout + proc.stderr,
-                "summary": summary, "files": files}
+                "summary": summary, "files": files, "notice": notice}
 
 
 def zip_files(files: dict) -> bytes:
@@ -115,6 +131,7 @@ if check_password():
         with st.spinner("변환·검증 중..."):
             try:
                 st.session_state["result"] = convert(up.getvalue(), up.name)
+                get_notifier().notify(st.session_state["result"]["notice"])
             except subprocess.TimeoutExpired:
                 st.error("시간이 너무 오래 걸려 중단했습니다.")
 
