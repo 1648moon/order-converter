@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 import naming  # noqa: E402
+import xlsconv  # noqa: E402
 
 
 def next_run_dir(output_root: Path, today: str | None = None) -> Path:
@@ -86,6 +87,13 @@ def main() -> int:
     prev = previous_run_dir(root, run_dir)
     run_dir.mkdir()
     stem = src.stem
+    if xlsconv.is_xls(src):   # .xls 원본은 .xlsx 로 바꿔서 이후 단계에 넘긴다
+        try:
+            src = xlsconv.xls_to_xlsx(src, run_dir / "원본변환" / (stem + ".xlsx"))
+        except Exception as e:
+            print(f"[실패] .xls 읽기: {e}", file=sys.stderr)
+            return 1
+        print(f"[정상] .xls 원본을 .xlsx 로 변환: {stem}")
     now = datetime.now()
     if a.ampm:
         now = now.replace(hour=9 if a.ampm == "오전" else 14)
