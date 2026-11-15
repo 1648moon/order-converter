@@ -104,4 +104,7 @@ with tempfile.TemporaryDirectory() as t:
     assert app.get("/files/..%2F/x.xlsx", follow_redirects=True).status_code == 404
     assert app.get("/files/2026-11-10_v4/실행요약.txt").status_code == 404
     assert app.get("/", headers={"Host": "evil.example.com"}).status_code == 403
+
+srv = discord_notify.Notifier(None, None, None, None)                  # 서버(Streamlit): 결과를 저장하지 않음
+assert "저장하지 않아" in srv.reply_for("상태") and "저장하지 않아" in srv.reply_for("목록")
 print("OK")
