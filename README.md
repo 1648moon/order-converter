@@ -98,6 +98,7 @@ BRAND_NAME=내브랜드          # 파일명에 들어가는 이름 (없으면 "
 DISCORD_TOKEN=...            # 디스코드 알림 봇 (세 개가 모두 있어야 켜집니다)
 DISCORD_CHANNEL_ID=...
 DISCORD_OWNER_ID=...
+# DISCORD_ALLOWED_IDS=111111111111111111,222222222222222222   # 본인 외에 명령(상태·목록·웹)을 쓸 사람의 ID (쉼표로 구분, 선택)
 INPUT_ROOT=/절대/경로/input    # 업로드 파일 저장 폴더 (기본: 저장소 안 input/)
 OUTPUT_ROOT=/절대/경로/output  # 결과 폴더 (기본: 저장소 안 output/)
 # WEB_PORT=8765              # 웹 화면 포트 (기본 8765)
