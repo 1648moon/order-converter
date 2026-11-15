@@ -118,6 +118,18 @@ wb.save(src)
 orders, unmatched = RR.unmatched_products(src)
 assert orders == 3 and unmatched == ["미등록테스트상품Q"], (orders, unmatched)
 
+# .xls 원본: 업로드 파일은 .xlsx 로 못 열지만 run_all 이 만든 원본변환/*.xlsx 가 있으면 그것으로 요약한다
+xls_run = TMP / "run_xls"
+(xls_run / "원본변환").mkdir(parents=True)
+(TMP / "fake.xls").write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 64)
+import shutil  # noqa: E402
+shutil.copy(src, xls_run / "원본변환" / "fake.xlsx")
+assert RR.converted_source(xls_run) == xls_run / "원본변환" / "fake.xlsx" and RR.converted_source(TMP / "nope") is None
+rec_x = RR.build_record(TMP / "fake.xls", xls_run, NS(name="2026-11-15_v2", overall="경고", files=[], warn_stages=[], fail_stages=[]))
+assert rec_x["orders"] == 3 and rec_x["unmatched_products"] == ["미등록테스트상품Q"] and rec_x["partial"] is False
+rec_bad = RR.build_record(TMP / "fake.xls", TMP / "nope", NS(name="r", overall="실패", files=[], warn_stages=[], fail_stages=[]))
+assert rec_bad["partial"] is True and rec_bad["orders"] is None          # 변환본도 없으면 부분 기록으로만 남는다
+
 inter = TMP / "inter_변환.xlsx"
 wb = Workbook()
 ws = wb.active
