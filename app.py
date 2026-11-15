@@ -119,6 +119,7 @@ def prune_state() -> None:
                 p.unlink(missing_ok=True)
 
 
+get_notifier()          # 서버가 켜지면 봇도 바로 접속 (첫 변환 전에도 '웹' 명령에 응답)
 st.title("📦 주문 엑셀 변환")
 
 if check_password():
