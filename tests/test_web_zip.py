@@ -20,6 +20,11 @@ with tempfile.TemporaryDirectory() as t:
     r = c.get("/zip/2026-11-10_v1", base_url="http://127.0.0.1")
     assert r.status_code == 200 and r.mimetype == "application/zip"
     assert sorted(zipfile.ZipFile(io.BytesIO(r.data)).namelist()) == ["a.xlsx", "b.xlsx"]
+    import re
+    assert re.search(r'filename=\d{6}\.zip', r.headers["Content-Disposition"])      # 파일명은 YYMMDD.zip
+    (d / "26-11-10 발송내역.xlsx").write_bytes(b"C")
+    r2 = c.get("/zip/2026-11-10_v1", base_url="http://127.0.0.1")
+    assert "filename=261110.zip" in r2.headers["Content-Disposition"]
     assert c.get("/zip/2026-11-10_v2", base_url="http://127.0.0.1").status_code == 404
     assert c.get("/zip/..", base_url="http://127.0.0.1").status_code == 404
     assert c.get("/zip/2026-11-10_v1", base_url="http://evil.com").status_code == 403
