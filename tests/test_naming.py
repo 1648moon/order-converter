@@ -23,3 +23,8 @@ with tempfile.TemporaryDirectory() as d:
 assert N.cj_stem("26-11-10 브랜드주문(1)-2", "-CJ") == "26-11-10 브랜드주문(1)-CJ"
 assert N.cj_stem("주문원본1_공장", "-CJ") == "주문원본1_공장-CJ"
 print("OK")
+
+# 전체 다운로드 ZIP 이름: 산출물 파일명 앞 날짜(YYMMDD), 없으면 오늘
+assert N.zip_name(["26-11-10 브랜드주문(1)-1.xlsx", "26-11-10 발송내역.xlsx"]) == "261110.zip"
+assert N.zip_name(["26-11-09 발송내역.xlsx", "26-11-10 발송내역.xlsx"]) == "261110.zip"
+assert N.zip_name(["a.xlsx", "b.xlsx"], datetime(2026, 11, 16)) == "261116.zip"

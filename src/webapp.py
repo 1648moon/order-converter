@@ -17,6 +17,7 @@ from typing import Callable
 
 from flask import Flask, abort, render_template_string, request, send_file, send_from_directory
 
+import naming
 import runinfo
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -137,6 +138,6 @@ def create_app(root: Path = ROOT, notify: Callable[[str], None] | None = None,
                 z.write(p, p.name)
         buf.seek(0)
         return send_file(buf, mimetype="application/zip", as_attachment=True,
-                         download_name=f"{run}.zip")
+                         download_name=naming.zip_name(p.name for p in files))
 
     return app

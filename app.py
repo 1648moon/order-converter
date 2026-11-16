@@ -148,7 +148,7 @@ if check_password():
             st.error("실패했습니다. 파일은 제공하지 않습니다. 아래 요약을 확인하세요.")
         if len(res["files"]) > 1:
             st.download_button(f"⬇ 전체 한 번에 받기 (ZIP, {len(res['files'])}개)",
-                               zip_files(res["files"]), file_name="변환결과.zip",
+                               zip_files(res["files"]), file_name=naming.zip_name(res["files"]),
                                mime="application/zip", type="primary", key="zip_all")
         for name, blob in res["files"].items():
             st.download_button(f"⬇ {name}", blob, file_name=name,

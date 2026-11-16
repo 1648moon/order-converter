@@ -104,3 +104,14 @@ def with_source_date(now: datetime, src: Path) -> datetime:
     """실행 시각(now)의 시·분은 유지하고 날짜만 원본 파일 날짜로 바꾼다."""
     d = source_date(src)
     return now.replace(year=d.year, month=d.month, day=d.day) if d else now
+
+
+def zip_name(file_names, today: datetime | None = None) -> str:
+    """전체 다운로드 ZIP 이름: 'YYMMDD.zip'. 날짜는 산출물 파일명 앞의 'YY-MM-DD' (원본 날짜) 중 가장 늦은 것.
+    날짜가 붙은 파일이 없으면 오늘 날짜."""
+    dates = []
+    for n in file_names:
+        m = re.match(r"^(\d{2})-(\d{2})-(\d{2}) ", str(n))
+        if m:
+            dates.append("".join(m.groups()))
+    return f"{max(dates) if dates else (today or datetime.now()).strftime('%y%m%d')}.zip"
