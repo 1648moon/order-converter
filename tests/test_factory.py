@@ -20,6 +20,11 @@ assert F.shipping_fee("시애틀F26/블랙", None, cfg) == 12000
 assert F.shipping_fee("빅마운틴/블랙(2026)", None, cfg) == 10000
 assert F.shipping_fee("시애틀GS20/라이트바이올렛", "", cfg) == 10000
 
+# 보호대(부품)는 조립 여부와 모델 무관하게 부품 운임 (샘플 2000, 맨 위 규칙)
+assert F.shipping_fee("삼천리SPS110어린이보호대/블루", None, cfg) == 2000
+assert F.shipping_fee("삼천리SPS150어린이보호대", A, cfg) == 2000
+assert F.shipping_fee_info("삼천리SPS110어린이보호대/블루", None, cfg)[1] is True
+
 # 상품옵션: 선택사항 + ", " + 추가구성
 assert F.product_option(A, None, cfg) == A
 assert F.product_option(A, "헬멧", cfg) == "100%조립요청, 헬멧"

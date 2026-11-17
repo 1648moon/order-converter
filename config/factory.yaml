@@ -32,6 +32,7 @@ option_joiner: ", "         # 상품옵션 = 선택사항 + 구분자 + 추가�
 # product_contains: 중간파일 상품명에 이 문구(모델명)가 들어 있어야 함 (생략 가능)
 # 새 모델/운임은 해당 구역에 한 줄 추가하면 된다.
 shipping_rules:
+  - {product_contains: "보호대", fee: 2000}                           # 보호대(부품): 조립 여부 무관, 맨 위에서 먼저 검사
   - {assembled: true,  fee: 20000}                                # 완전조립: 모델 무관
   - {assembled: false, product_contains: "빅마운틴", fee: 10000}
   - {assembled: false, product_contains: "시애틀키즈18", fee: 8000}
