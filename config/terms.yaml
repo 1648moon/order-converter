@@ -105,6 +105,10 @@ products:
   - contains: ["아이시스"]
     template: "아이시스K5에일린2주니어헬멧/{color}{count}"
     blank_option: true
+  # SPS150L(캐릭터판)과 SPS150은 다른 모델: SPS150L 을 먼저 검사한다
+  - contains: ["SPS150L"]
+    template: "삼천리SPS150L어린이보호대/{color}{count}"
+    blank_option: true
   - contains: ["SPS150"]
     template: "삼천리SPS150어린이보호대/{color}{count}"
     blank_option: true
