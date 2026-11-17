@@ -113,9 +113,9 @@ def count_suffix(option) -> str:
 
 
 def find_rule(name, terms: dict):
-    plain = _s(name).replace(" ", "")
+    plain = _s(name).replace(" ", "").lower()    # 대소문자 무시 (sps150l == SPS150L)
     for rule in terms["products"]:
-        if all(k.replace(" ", "") in plain for k in rule["contains"]):
+        if all(k.replace(" ", "").lower() in plain for k in rule["contains"]):
             return rule
     return None
 
@@ -136,8 +136,9 @@ def convert_product(name, option, terms: dict):
     plain = text.replace(" ", "")
     if plain in {_s(x).replace(" ", "") for x in terms.get("passthrough_products") or []}:
         return name, None       # 이름을 바꾸지 않는 상품(예: 추가상품). 경고 없이 원본 유지
+    low = plain.lower()    # contains 는 대소문자 무시 (sps150l == SPS150L)
     for rule in terms["products"]:
-        if all(k.replace(" ", "") in plain for k in rule["contains"]):
+        if all(k.replace(" ", "").lower() in low for k in rule["contains"]):
             values = {}
             values["color"] = extract_color(option, terms) or ""
             values["count"] = count_suffix(option)

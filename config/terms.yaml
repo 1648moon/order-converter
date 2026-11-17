@@ -105,18 +105,38 @@ products:
   - contains: ["아이시스"]
     template: "아이시스K5에일린2주니어헬멧/{color}{count}"
     blank_option: true
+  # SPS150(일반)과 SPS150L(캐릭터판)은 다른 상품. L 과 캐릭터명(레전드티니핑·캐치티니핑·겨울왕국·프린세스)을 축약형에 그대로 넣는다.
+  # 더 구체적인 규칙이 위에 와야 하므로 '레전드티니핑'이 '캐치티니핑'(상품명에 같이 적히는 경우)보다 먼저.
+  - contains: ["SPS150L", "레전드", "티니핑"]
+    template: "삼천리SPS150L레전드티니핑어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["SPS150L", "캐치티니핑"]
+    template: "삼천리SPS150L캐치티니핑어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["SPS150L", "겨울왕국"]
+    template: "삼천리SPS150L겨울왕국어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["SPS150L", "프린세스"]
+    template: "삼천리SPS150L프린세스어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["SPS150L"]
+    template: "삼천리SPS150L어린이보호대/{color}{count}"
+    blank_option: true
   - contains: ["SPS150"]
     template: "삼천리SPS150어린이보호대/{color}{count}"
     blank_option: true
-  # 코드 없는 캐릭터 보호대는 SPS150으로 추측
-  - contains: ["보호대", "티니핑"]
-    template: "삼천리SPS150어린이보호대/{color}{count}"
+  # 코드 없는 캐릭터 보호대는 캐릭터판(SPS150L)으로 추측
+  - contains: ["보호대", "레전드", "티니핑"]
+    template: "삼천리SPS150L레전드티니핑어린이보호대/{color}{count}"
+    blank_option: true
+  - contains: ["보호대", "캐치티니핑"]
+    template: "삼천리SPS150L캐치티니핑어린이보호대/{color}{count}"
     blank_option: true
   - contains: ["보호대", "겨울왕국"]
-    template: "삼천리SPS150어린이보호대/{color}{count}"
+    template: "삼천리SPS150L겨울왕국어린이보호대/{color}{count}"
     blank_option: true
   - contains: ["보호대", "프린세스"]
-    template: "삼천리SPS150어린이보호대/{color}{count}"
+    template: "삼천리SPS150L프린세스어린이보호대/{color}{count}"
     blank_option: true
   - contains: ["AF015"]
     template: "삼천리AF015올러스전조등/{color}{count}"
