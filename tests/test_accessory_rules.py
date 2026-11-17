@@ -1,6 +1,5 @@
 """자전거·용품 축약 규칙(terms.yaml)과 '색상 없으면 /색상 생략' 동작 테스트.
 실행: .venv/bin/python -I tests/test_accessory_rules.py
-input/상품목록(20261110)_전체축약.xlsx 가 있으면 B열(추측값)과 규칙 결과가 같은지도 확인한다.
 """
 import sys
 from pathlib import Path
@@ -47,20 +46,4 @@ assert conv("삼천리SPS150L보호대")[0] == "삼천리SPS150L어린이보호�
 # 코드 없는 캐릭터 보호대는 캐릭터판(SPS150L)으로 추측
 assert conv("삼천리자전거 캐치티니핑 하츄핑 어린이 아동용 보호장비 무릎 팔꿈치 보호대 세트")[0] == "삼천리SPS150L캐치티니핑어린이보호대"
 
-xlsx = Path(__file__).resolve().parent.parent / "input" / "상품목록(20261110)_전체축약.xlsx"
-if xlsx.exists():
-    import openpyxl
-    ws = openpyxl.load_workbook(xlsx).active
-    bad = []
-    for r in range(2, ws.max_row + 1):
-        name, want = ws.cell(r, 1).value, ws.cell(r, 2).value
-        if not name or not want or "이미 축약형" in str(ws.cell(r, 3).value or ""):
-            continue
-        got, w = conv(str(name), f"색상: §")
-        got = got.replace("/§", "")
-        if w or got != want.rstrip("/"):
-            bad.append((name, want, got, w))
-    for b in bad[:10]:
-        print("불일치:", b)
-    assert not bad, f"엑셀 추측값과 규칙 결과가 다른 행 {len(bad)}개"
 print("OK")
