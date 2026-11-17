@@ -106,6 +106,28 @@ def extract_color(option, terms: dict) -> str | None:
     return None
 
 
+def _known_colors(terms: dict) -> set[str]:
+    """색상 단어 집합: terms.yaml color_words + 내부보관용 목록(product_list)의 '/색상' 부분."""
+    known = set(terms.get("color_words") or [])
+    for b in terms.get("_bikes") or []:
+        m = re.search(r"/([가-힣]+)", b)      # '시애틀키즈18/라이트블루' -> 라이트블루 ('엑스퍼트/380블랙화이트' 처럼 숫자 낀 건 제외)
+        if m and not re.match(r"/\d", b[b.find("/"):]):
+            known.add(m.group(1))
+    return known
+
+
+def color_from_name(name, terms: dict) -> str:
+    """선택사항에 색상이 없을 때 상품명에서 찾는다. '빅마운틴/블랙(2025)', '시애틀MT24/레드' 의 '/블랙' 처럼
+    '/' 뒤에 알려진 색상 단어가 오거나, '다크실버/미조립' 처럼 조립 표기 앞에 색상이 있는 경우."""
+    text = _s(name)
+    known = _known_colors(terms)
+    for pat in (r"/\s*([가-힣]+)", r"([가-힣]+)\s*/\s*(?:완전조립|미조립)"):
+        for m in re.finditer(pat, text):
+            if m.group(1) in known:
+                return m.group(1) + _second_color(text, m.end(), terms)
+    return ""
+
+
 def count_suffix(option) -> str:
     """선택사항의 'N개'가 2 이상이면 '/N개', 아니면 빈 문자열. 템플릿의 {count} 자리에 들어간다."""
     nums = [int(n) for n in re.findall(r"(\d+)\s*개", _s(option))]
@@ -139,7 +161,7 @@ def convert_product(name, option, terms: dict):
     for rule in terms["products"]:
         if all(k.replace(" ", "") in plain for k in rule["contains"]):
             values = {}
-            values["color"] = extract_color(option, terms) or ""
+            values["color"] = extract_color(option, terms) or color_from_name(text, terms)   # 선택사항 우선, 없으면 상품명
             values["count"] = count_suffix(option)
             if not values["color"] and rule.get("color_from_name"):
                 values["color"] = _color_in_name(text, terms)   # 선택사항에 색상이 없으면 상품명에서
@@ -162,13 +184,15 @@ def convert_product(name, option, terms: dict):
                     if rule.get("fallthrough"):
                         skip = True           # 값을 못 찾으면 경고 대신 아래의 다음 규칙으로 넘어간다
                         break
+                    if plain in {b.replace(" ", "") for b in terms.get("_bikes") or []}:
+                        return name, None     # 이미 내부보관용 목록과 같은 축약명(예: '시애틀키즈18/라이트블루')이면 그대로
                     return name, f"상품명에서 '{var}' 값을 찾지 못함"
             if skip:
                 continue
             return render(rule["template"], **values), None
     hit = (terms.get("_map") or {}).get(plain)
     if hit:
-        value = render(hit["template"], color=extract_color(option, terms) or "", count=count_suffix(option))
+        value = render(hit["template"], color=extract_color(option, terms) or color_from_name(name, terms), count=count_suffix(option))
         return value, (LLM_WARN if hit["status"] != "ok" else None)
     return name, "변환 표에 없는 상품"
 
