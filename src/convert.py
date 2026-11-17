@@ -128,11 +128,12 @@ def convert(src: Path, dst: Path, terms: dict, use_llm: bool = False,
         ws.cell(r, h["선택사항"]).value = new_opt
 
     # 1-1) 부품(단가 <= parts_rule.max_unit_price)은 택배사를 CJ 로
-    if "단가" in h and "택배사" in h:
+    if "택배사" in h:
         n_part = 0
         for r in rows:
             cur = ws.cell(r, h["택배사"]).value
-            new = rules.expected_carrier(cur, ws.cell(r, h["단가"]).value, terms)
+            price = ws.cell(r, h["단가"]).value if "단가" in h else None
+            new = rules.expected_carrier(cur, price, terms, ws.cell(r, h["상품명"]).value)
             if new != cur:
                 ws.cell(r, h["택배사"]).value = new
                 n_part += 1

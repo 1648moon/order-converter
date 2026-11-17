@@ -237,9 +237,18 @@ def is_part(price, terms: dict) -> bool:
     return bool(rule) and p is not None and p <= rule["max_unit_price"]
 
 
-def expected_carrier(carrier, price, terms: dict):
-    """부품이면 parts_rule.carrier, 아니면 원래 택배사 값 그대로."""
-    return terms["parts_rule"]["carrier"] if is_part(price, terms) else carrier
+def is_part_name(name, terms: dict) -> bool:
+    """상품명에 parts_rule.carrier_by_name 의 단어(예: '보호대')가 있으면 단가와 무관하게 부품."""
+    words = (terms.get("parts_rule") or {}).get("carrier_by_name") or []
+    plain = _s(name).replace(" ", "")
+    return any(w.replace(" ", "") in plain for w in words)
+
+
+def expected_carrier(carrier, price, terms: dict, name=None):
+    """부품(단가 기준 또는 상품명 기준)이면 parts_rule.carrier, 아니면 원래 택배사 값 그대로."""
+    if is_part(price, terms) or is_part_name(name, terms):
+        return terms["parts_rule"]["carrier"]
+    return carrier
 
 
 def make_extra(receiver, address, terms: dict) -> str:

@@ -79,8 +79,10 @@ def validate(src: Path, out: Path, terms: dict) -> list[tuple]:
                 continue
             if name == "수량" and not is_claim(a, ha, r1):    # 수량 2+ 주문은 행 복사 후 수량 1
                 v1 = 1 if qty_of(a, ha, r1) > 1 else v1
-            if name == "택배사" and "단가" in ha:     # 부품(단가 이하)은 CJ 로 바뀌는 것이 기대값
-                v1 = rules.expected_carrier(v1, a.cell(r1, ha["단가"]).value, terms)
+            if name == "택배사":     # 부품(단가 이하, 또는 상품명에 '보호대')은 CJ 로 바뀌는 것이 기대값
+                price = a.cell(r1, ha["단가"]).value if "단가" in ha else None
+                conv_name, _ = rules.convert_product(a.cell(r1, ha["상품명"]).value, a.cell(r1, ha["선택사항"]).value, terms)
+                v1 = rules.expected_carrier(v1, price, terms, conv_name)
             if norm(v1) != norm(v2):
                 diffs.append(("공통값", r2, name, v1, v2))
         opt = a.cell(r1, ha["선택사항"]).value
