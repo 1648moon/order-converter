@@ -28,6 +28,20 @@ convert.convert(d / "src.xlsx", d / "out.xlsx", terms)
 o = load_workbook(d / "out.xlsx").active
 h = convert.header_map(o)
 assert [o.cell(r, h["택배사"]).value for r in (2, 3, 4)] == ["경동택배", "CJ택배", "CJ택배"]
+
+# 보호대는 단가가 높거나 비어 있어도 항상 CJ (상품명 기준)
+assert rules.expected_carrier("경동택배", 250000, terms, "삼천리SPS110어린이보호대/블루") == "CJ택배"
+assert rules.expected_carrier("경동택배", None, terms, "삼천리자전거 어린이 보호대 세트") == "CJ택배"
+assert rules.expected_carrier("경동택배", 250000, terms, "빅마운틴/블랙(2026)") == "경동택배"
+wb = Workbook(); ws = wb.active
+ws.append(["주문번호", "상품명", "선택사항", "수령자", "주소", "단가", "택배사"])
+ws.append(["1", "삼천리자전거 어린이 아동 보호대 무릎 팔꿈치 세트 SPS110", "블루 1개", "가", "서울시 강남구", 250000, "경동택배"])
+ws.append(["2", "삼천리자전거 어린이 아동 보호대 무릎 팔꿈치 세트 SPS110", "블루 1개", "나", "서울시 강남구", None, "경동택배"])
+ws.append(["3", "빅마운틴 2026년형", "색상:블랙", "다", "서울시 강남구", 250000, "경동택배"])
+d = Path(tempfile.mkdtemp()); wb.save(d / "src.xlsx")
+convert.convert(d / "src.xlsx", d / "out.xlsx", terms)
+o = load_workbook(d / "out.xlsx").active; h = convert.header_map(o)
+assert [o.cell(r, h["택배사"]).value for r in (2, 3, 4)] == ["CJ택배", "CJ택배", "경동택배"]
 print("OK")
 
 # 색상: 조립여부 뒤에 사이즈(24인치)가 와도 색상으로 잡지 않는다
