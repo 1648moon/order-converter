@@ -112,15 +112,15 @@ products:
   - contains: ["SPS150"]
     template: "삼천리SPS150어린이보호대/{color}{count}"
     blank_option: true
-  # 코드 없는 캐릭터 보호대는 SPS150으로 추측
+  # 코드 없는 캐릭터 보호대는 캐릭터판 SPS150L 로 본다
   - contains: ["보호대", "티니핑"]
-    template: "삼천리SPS150어린이보호대/{color}{count}"
+    template: "삼천리SPS150L어린이보호대/{color}{count}"
     blank_option: true
   - contains: ["보호대", "겨울왕국"]
-    template: "삼천리SPS150어린이보호대/{color}{count}"
+    template: "삼천리SPS150L어린이보호대/{color}{count}"
     blank_option: true
   - contains: ["보호대", "프린세스"]
-    template: "삼천리SPS150어린이보호대/{color}{count}"
+    template: "삼천리SPS150L어린이보호대/{color}{count}"
     blank_option: true
   - contains: ["AF015"]
     template: "삼천리AF015올러스전조등/{color}{count}"
