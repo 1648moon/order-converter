@@ -95,6 +95,12 @@ class Notifier:
                 return self.open_web()
             except Exception as e:                   # 브라우저를 못 열어도 봇은 계속 동작
                 return f"웹 페이지를 열지 못했습니다 ({type(e).__name__})."
+        if word == "진단" or word.startswith("진단 "):                   # '진단' / '진단 2026-11-19_v1': 고객 정보 없는 변환 진단 요약
+            try:
+                import diag
+                return diag.reply(word[2:])
+            except Exception as e:
+                return f"진단 기록을 읽지 못했습니다 ({type(e).__name__})."
         if word in ("상태", "목록"):
             if self.output_root is None:             # 서버(Streamlit)는 결과를 저장하지 않는다
                 return "이 서버는 변환 결과를 저장하지 않아 상태·목록을 알려드릴 수 없습니다. 변환이 끝나면 알림이 옵니다."
