@@ -103,6 +103,11 @@ def extract_color(option, terms: dict) -> str | None:
             if color.strip():
                 return color.strip() + _second_color(text, m.end(), terms)
             # 비었으면(예: '미조립 1개' 에서 '1개' 만 잡힘) 다음 패턴을 계속 시도한다
+    # 선택사항이 색상 단어만 적힌 경우: '블랙', '블랙/레드' (color_words 에 있는 단어만 인정)
+    words = terms.get("color_words") or []
+    parts = [w.strip() for w in re.sub(r"\(.*?\)", "", text).split("/")]
+    if parts and 1 <= len(parts) <= 2 and all(w in words for w in parts):
+        return "".join(parts)
     return None
 
 
