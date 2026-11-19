@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import agent_chat  # noqa: E402
 import agent_state  # noqa: E402
 import discord_notify  # noqa: E402
+import diag  # noqa: E402
 import naming  # noqa: E402
 import run_report  # noqa: E402
 import runinfo  # noqa: E402
@@ -74,6 +75,7 @@ def convert(data: bytes, filename: str) -> dict:
             cwd=ROOT, capture_output=True, text=True, timeout=300)
         runs = sorted(d for d in out_root.iterdir() if d.is_dir() and d.name != "latest"
                       and not d.is_symlink())
+        diag.save_run(src, runs[-1] if runs else None, proc.returncode, proc.stderr)   # 고객 정보 없는 진단 기록 (실패해도 무시)
         files, summary = {}, ""
         notice = "❌ 변환 실패 · 실행 결과 폴더를 만들지 못했습니다"
         issues = None
