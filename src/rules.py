@@ -86,11 +86,15 @@ def _second_color(text: str, end: int, terms: dict) -> str:
 
 
 def _color_in_name(text: str, terms: dict) -> str:
-    """상품명 안의 색상 단어(terms.yaml color_words). 긴 단어 우선('스카이블루' 가 '블루' 보다 먼저)."""
+    """상품명 안의 색상 단어(terms.yaml color_words). 서로 다른 색상이 정확히 하나일 때만 돌려준다.
+    둘 이상 적혀 있으면('블랙/화이트 중 택1' 같은 색상 목록) 추측하지 않고 빈 문자열.
+    긴 단어 우선('스카이블루' 안의 '블루' 는 따로 세지 않는다)."""
+    found, rest = [], text
     for w in sorted(terms.get("color_words") or [], key=len, reverse=True):
-        if w in text:
-            return w
-    return ""
+        if w in rest:
+            found.append(w)
+            rest = rest.replace(w, " ")
+    return found[0] if len(found) == 1 else ""
 
 
 def extract_color(option, terms: dict) -> str | None:
@@ -168,10 +172,10 @@ def convert_product(name, option, terms: dict):
             values = {}
             values["color"] = extract_color(option, terms) or color_from_name(text, terms)   # 선택사항 우선, 없으면 상품명
             values["count"] = count_suffix(option)
-            if not values["color"] and rule.get("color_from_name"):
-                values["color"] = _color_in_name(text, terms)   # 선택사항에 색상이 없으면 상품명에서
-                if not values["count"]:
-                    values["count"] = count_suffix(text)
+            if not values["color"]:
+                values["color"] = _color_in_name(text, terms)   # 선택사항에 색상이 없으면 상품명에서 (모든 상품)
+            if not values["count"] and rule.get("color_from_name"):
+                values["count"] = count_suffix(text)            # 수량도 상품명에서: 이 플래그가 켜진 규칙만
             skip = False
             for var, pats in (rule.get("vars") or {}).items():
                 for pat in pats:

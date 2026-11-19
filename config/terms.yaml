@@ -155,7 +155,7 @@ products:
       size: ['잠금장치\s*(소|중|대)(?![가-힣])']
     template: "삼천리SL160C컬러번호키{size}/{color}{count}"
     blank_option: true
-    color_from_name: true      # 선택사항에 색상이 없으면 상품명('…중, 화이트, 1개')에서 읽는다
+    color_from_name: true      # 수량도 상품명('…중, 화이트, 1개')에서 읽는다 (색상은 모든 상품이 선택사항에 없으면 상품명에서 읽는다)
   # SL160C 를 SL160 보다 먼저 검사. 소/중/대는 상품명에서 읽는다.
   - contains: ["SL160C"]
     vars:
