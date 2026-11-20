@@ -86,15 +86,22 @@ def _second_color(text: str, end: int, terms: dict) -> str:
 
 
 def _color_in_name(text: str, terms: dict) -> str:
-    """상품명 안의 색상 단어(terms.yaml color_words). 서로 다른 색상이 정확히 하나일 때만 돌려준다.
-    둘 이상 적혀 있으면('블랙/화이트 중 택1' 같은 색상 목록) 추측하지 않고 빈 문자열.
+    """문장 안의 색상 단어(terms.yaml color_words)를 찾아 색상으로 돌려준다.
+    - 서로 다른 색상이 하나면 그 색상, '블랙/레드' 처럼 두 색상이 바로 붙어(/ , 공백만 사이) 있으면 '블랙레드'.
+    - 그 외(떨어져 있는 둘 이상, '블랙/화이트 중 택1' 같은 목록 포함)는 추측하지 않고 빈 문자열.
     긴 단어 우선('스카이블루' 안의 '블루' 는 따로 세지 않는다)."""
-    found, rest = [], text
-    for w in sorted(terms.get("color_words") or [], key=len, reverse=True):
-        if w in rest:
-            found.append(w)
-            rest = rest.replace(w, " ")
-    return found[0] if len(found) == 1 else ""
+    words = sorted(terms.get("color_words") or [], key=len, reverse=True)
+    if not words:
+        return ""
+    hits = [m for m in re.finditer("|".join(re.escape(w) for w in words), text)]
+    distinct = list(dict.fromkeys(m.group(0) for m in hits))
+    if len(distinct) == 1:
+        return distinct[0]
+    if len(distinct) == 2 and len(hits) == 2 and re.fullmatch(r"[\s/,·&+]*", text[hits[0].end():hits[1].start()]):
+        after = text[hits[1].end():]
+        if not re.match(r"\s*(?:중|택|또는|or)", after):        # '블랙/화이트 택1' 은 목록이므로 제외
+            return hits[0].group(0) + hits[1].group(0)
+    return ""
 
 
 def extract_color(option, terms: dict) -> str | None:
@@ -112,7 +119,7 @@ def extract_color(option, terms: dict) -> str | None:
     parts = [w.strip() for w in re.sub(r"\(.*?\)", "", text).split("/")]
     if parts and 1 <= len(parts) <= 2 and all(w in words for w in parts):
         return "".join(parts)
-    return None
+    return _color_in_name(re.sub(r"\(.*?\)", "", text), terms) or None     # 그 밖에는 선택사항 어디에든 색상 단어가 있으면 인식
 
 
 def _known_colors(terms: dict) -> set[str]:
