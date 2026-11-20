@@ -92,11 +92,10 @@ def convert(data: bytes, filename: str) -> dict:
             summary_file = run_dir / "실행요약.txt"
             if summary_file.exists():
                 summary = summary_file.read_text(encoding="utf-8")
-            if proc.returncode != 1:                   # 실패 실행의 파일은 내려주지 않음
-                for p in sorted(run_dir.glob("*.xlsx")):
-                    files[p.name] = p.read_bytes()
-                    if FACTORY_RE.match(p.name):
-                        (STATE_DIR / p.name).touch()
+            for p in sorted(run_dir.glob("*.xlsx")):   # 검증에 실패해도 파일은 내려준다 (확인 후 직접 판단)
+                files[p.name] = p.read_bytes()
+                if proc.returncode != 1 and FACTORY_RE.match(p.name):   # 실패 실행은 공장용 번호를 소모하지 않는다
+                    (STATE_DIR / p.name).touch()
         return {"code": proc.returncode, "log": proc.stdout + proc.stderr,
                 "summary": summary, "files": files, "notice": notice, "issues": issues}
 
@@ -147,7 +146,7 @@ if check_password():
         elif code == 2:
             st.warning("파일은 만들었지만 경고가 있습니다. 아래 요약을 확인하세요.")
         else:
-            st.error("실패했습니다. 파일은 제공하지 않습니다. 아래 요약을 확인하세요.")
+            st.error("검증에 실패했습니다. 파일은 받을 수 있지만, 아래 요약을 확인하고 내용을 점검한 뒤 사용하세요.")
         if len(res["files"]) > 1:
             st.download_button(f"⬇ 전체 한 번에 받기 (ZIP, {len(res['files'])}개)",
                                zip_files(res["files"]), file_name=naming.zip_name(res["files"]),
