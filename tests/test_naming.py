@@ -28,3 +28,11 @@ print("OK")
 assert N.zip_name(["26-11-10 브랜드주문(1)-1.xlsx", "26-11-10 발송내역.xlsx"]) == "261110.zip"
 assert N.zip_name(["26-11-09 발송내역.xlsx", "26-11-10 발송내역.xlsx"]) == "261110.zip"
 assert N.zip_name(["a.xlsx", "b.xlsx"], datetime(2026, 11, 16)) == "261116.zip"
+
+# 날짜는 원본 파일명에 적힌 날짜를 따른다 (주문일자 열과 무관)
+assert N.filename_date("발송대기_(기본)-선택주문(2026-11-20 08;54;26) 원본.xlsx") == datetime(2026, 11, 20)
+assert N.filename_date("주문_20261127.xlsx") == datetime(2026, 11, 27)
+assert N.filename_date("주문원본.xlsx") is None
+assert N.filename_date("주문_2026-13-45.xlsx") is None                     # 말이 안 되는 날짜는 무시
+assert N.source_date(Path("/nonexistent/발송대기-선택주문(2026-11-27 08;00;00) 원본.xlsx")) == datetime(2026, 11, 27)
+assert N.with_source_date(datetime(2026, 11, 28, 14, 5), Path("선택주문(2026-11-27 08;00;00).xlsx")) == datetime(2026, 11, 27, 14, 5)
