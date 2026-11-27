@@ -6,7 +6,7 @@
     내부보관용    YY-MM-DD 발송내역.xlsx
     중간파일      {원본이름}_변환.xlsx   (내부용, 규칙 대상 아님)
 
-날짜는 원본 파일 기준 (source_date: 주문일자 열의 가장 늦은 날짜 → 없으면 파일 수정일 → 없으면 오늘).
+날짜는 원본 파일 기준 (source_date: 원본 파일명의 날짜 → 없으면 주문일자 열의 가장 늦은 날짜 → 없으면 파일 수정일 → 없으면 오늘).
 오전/오후는 실행 시각 기준 (12시 이전 = 오전). V 는 output 아래(하위 폴더 포함)에 이미 있는 같은 날·같은 A 파일 중 최대값 + 1.
 """
 from __future__ import annotations
@@ -66,8 +66,25 @@ def cj_stem(stem: str, suffix: str) -> str:
     return f"{m.group(1)}-CJ" if m else stem + suffix
 
 
+FILENAME_DATE_RE = re.compile(r"(?<!\d)(20\d{2})[-.]?(0[1-9]|1[0-2])[-.]?(0[1-9]|[12]\d|3[01])(?!\d)")
+
+
+def filename_date(name: str) -> datetime | None:
+    """원본 파일명 안의 날짜(예: '선택주문(2026-11-20 08;54;26) 원본.xlsx' → 2026-11-20). 없으면 None."""
+    m = FILENAME_DATE_RE.search(name)
+    if not m:
+        return None
+    try:
+        return datetime(*(int(x) for x in m.groups()))
+    except ValueError:
+        return None
+
+
 def source_date(src: Path) -> datetime | None:
-    """원본 엑셀의 날짜: '주문일자(yyyyMMdd)' / '주문일(약식)' 열의 가장 늦은 날짜. 없으면 파일 수정일."""
+    """원본의 날짜: 원본 파일명에 적힌 날짜 → 없으면 '주문일자(yyyyMMdd)' / '주문일(약식)' 열의 가장 늦은 날짜 → 없으면 파일 수정일."""
+    d = filename_date(Path(src).name)
+    if d:
+        return d
     try:
         import openpyxl
         ws = openpyxl.load_workbook(src, read_only=True, data_only=True).active
