@@ -61,7 +61,7 @@ def check_file(a, h: dict, extra_col: int, ra: list[int], out: Path, cfg: dict, 
             "비고": g("배송메모"),
             "택배운임": fixed_fee if cj else F.shipping_fee(g("상품명"), g("선택사항"), cfg),
             "결제조건": cfg["payment_term"],
-            "상품옵션": F.product_option(g("선택사항"), g("추가구성"), cfg),
+            "상품옵션": F.product_option(g("선택사항"), g("추가구성"), cfg, g("상품명")),
         }
         for name, exp in expected.items():
             v = got(name)

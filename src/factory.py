@@ -113,10 +113,32 @@ def fee_warnings(ws, h: dict, rows: list[int], cfg: dict) -> list[str]:
     return sorted(out)
 
 
-def product_option(option, extra, cfg: dict) -> str | None:
-    """선택사항 + 추가구성. 추가구성에 쉼표로 구분된 여러 단어가 있으면 각각 ', '로 이어 붙인다."""
-    extras = [w.strip() for w in re.split(r"[,，]", _s(extra)) if w.strip()]
-    parts = [p for p in (_s(option), *extras) if p]
+# 상품명·선택사항·추가구성에 이 단어가 있으면 오른쪽 표기로 바꿔 상품옵션에 넣는다 (각각 따로 적용)
+OPTION_WORDS = (("삼천리흙받이", "레스포흙받이"), ("짐판", "일반짐판"))
+
+
+def _normalize_words(text: str) -> str:
+    for src, dst in OPTION_WORDS:
+        text = re.sub(rf"(?<!일반){src}" if src == "짐판" else src, dst, text)
+    return text
+
+
+def _has_word(text: str) -> list[str]:
+    plain = re.sub(r"\s+", "", text)
+    return [dst for src, dst in OPTION_WORDS if src in plain]
+
+
+def product_option(option, extra, cfg: dict, name=None) -> str | None:
+    """선택사항 + 추가구성(쉼표로 구분된 여러 개는 각각 ', ' 로 이어 붙임).
+    '짐판' → '일반짐판', '삼천리흙받이' → '레스포흙받이' 로 바꾸며, 상품명에 그 단어가 있으면 옵션에도 추가한다."""
+    seps = r"[,，+]" if _has_word(_s(extra)) else r"[,，]"       # '짐판+삼천리흙받이' 처럼 +로 이어진 것도 나눈다
+    extras = [w.strip() for w in re.split(seps, _s(extra)) if w.strip()]
+    parts = [_normalize_words(re.sub(r"^[┗└ㄴ\s]+", "", p)) if _has_word(p) else p
+             for p in (_s(option), *extras) if p]
+    for w in _has_word(_s(name)):            # 상품명에만 있는 경우도 옵션에 넣는다
+        if w not in parts:
+            parts.append(w)
+    parts = list(dict.fromkeys(parts))
     return cfg["option_joiner"].join(parts) or None
 
 
@@ -173,7 +195,7 @@ def build_row(ws, r: int, h: dict[str, int], extra_col: int, cfg: dict, fee: int
         fee if fee is not None else shipping_fee(g("상품명"), g("선택사항"), cfg),  # 택배운임(CJ는 고정값)
         cfg["payment_term"],                          # 결제조건
         g("상품명"),                                  # 상품명
-        product_option(g("선택사항"), g("추가구성"), cfg),  # 상품옵션
+        product_option(g("선택사항"), g("추가구성"), cfg, g("상품명")),  # 상품옵션
         g("배송메모"),                                # 비고
     ]
 

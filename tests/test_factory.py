@@ -26,6 +26,16 @@ assert F.product_option(A, "헬멧", cfg) == "100%조립요청, 헬멧"
 assert F.product_option(A, "헬멧 라이트", cfg) == "100%조립요청, 헬멧 라이트"
 assert F.product_option(A, "헬멧,라이트", cfg) == "100%조립요청, 헬멧, 라이트"   # 쉼표 구분 -> 각각 ', '
 assert F.product_option(A, "헬멧 ,  라이트 ,", cfg) == "100%조립요청, 헬멧, 라이트"  # 공백/빈 항목 정리
+assert F.product_option(None, "짐판, 삼천리흙받이", cfg) == "일반짐판, 레스포흙받이"      # 쉼표로 구분된 여러 추가구성
+assert F.product_option("완전조립", "짐판, 삼천리흙받이", cfg) == "완전조립, 일반짐판, 레스포흙받이"
+assert F.product_option(None, "삼천리흙받이, 헬멧, 짐판", cfg) == "레스포흙받이, 헬멧, 일반짐판"
+assert F.product_option(None, "짐판+삼천리흙받이", cfg) == "일반짐판, 레스포흙받이"
+assert F.product_option(None, "삼천리흙받이", cfg) == "레스포흙받이"                    # 하나만 있어도 변환
+assert F.product_option(None, "짐판", cfg) == "일반짐판"
+assert F.product_option(None, "일반짐판", cfg) == "일반짐판"                           # 이미 변환된 값은 그대로
+assert F.product_option("┗삼천리흙받이", None, cfg, "추가상품") == "레스포흙받이"      # 추가상품 행 (선택사항에 있음)
+assert F.product_option("완전조립", None, cfg, "삼천리 짐판") == "완전조립, 일반짐판"     # 상품명에만 있어도 옵션에 추가
+assert F.product_option("┗짐판", "짐판", cfg, "짐판") == "일반짐판"                    # 중복 제거
 assert F.product_option(None, "헬멧", cfg) == "헬멧"            # 미조립 + 추가구성
 assert F.product_option(None, None, cfg) is None
 
