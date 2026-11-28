@@ -26,6 +26,10 @@ assert F.product_option(A, "헬멧", cfg) == "100%조립요청, 헬멧"
 assert F.product_option(A, "헬멧 라이트", cfg) == "100%조립요청, 헬멧 라이트"
 assert F.product_option(A, "헬멧,라이트", cfg) == "100%조립요청, 헬멧, 라이트"   # 쉼표 구분 -> 각각 ', '
 assert F.product_option(A, "헬멧 ,  라이트 ,", cfg) == "100%조립요청, 헬멧, 라이트"  # 공백/빈 항목 정리
+assert F.product_option(None, "짐판, 삼천리흙받이", cfg) == "일반짐판, 레스포흙받이"      # 짐판+삼천리흙받이
+assert F.product_option("완전조립", "짐판+삼천리흙받이", cfg) == "완전조립, 일반짐판, 레스포흙받이"
+assert F.product_option(None, "삼천리흙받이, 헬멧, 짐판", cfg) == "레스포흙받이, 헬멧, 일반짐판"
+assert F.product_option(None, "삼천리흙받이", cfg) == "삼천리흙받이"                     # 짐판이 없으면 그대로
 assert F.product_option(None, "헬멧", cfg) == "헬멧"            # 미조립 + 추가구성
 assert F.product_option(None, None, cfg) is None
 

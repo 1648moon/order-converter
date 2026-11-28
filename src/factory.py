@@ -116,6 +116,14 @@ def fee_warnings(ws, h: dict, rows: list[int], cfg: dict) -> list[str]:
 def product_option(option, extra, cfg: dict) -> str | None:
     """선택사항 + 추가구성. 추가구성에 쉼표로 구분된 여러 단어가 있으면 각각 ', '로 이어 붙인다."""
     extras = [w.strip() for w in re.split(r"[,，]", _s(extra)) if w.strip()]
+    text = _s(extra)
+    if "짐판" in text and "삼천리흙받이" in text:      # 짐판 + 삼천리흙받이 조합은 '일반짐판, 레스포흙받이' 로 표기
+        toks = [w.strip() for w in re.split(r"[,，+]", text) if w.strip()]
+        extras = []
+        for w in toks:
+            w = "일반짐판" if "짐판" in w else "레스포흙받이" if "삼천리흙받이" in w else w
+            if w not in extras:
+                extras.append(w)
     parts = [p for p in (_s(option), *extras) if p]
     return cfg["option_joiner"].join(parts) or None
 
